@@ -16,7 +16,7 @@ class Corpus(SentenceCollection):
         self._prepareSentenceSplitter()
         self._prepareTokenizer()
         self._prepareStemmer()
-        self._prepareStopWordRemover()
+        self._prepareStopwords()
 
         self._documents = []
 
@@ -31,23 +31,21 @@ class Corpus(SentenceCollection):
     def _prepareStemmer(self):
         self._stemmer = nltk.stem.PorterStemmer()
 
-    def _prepareStopWordRemover(self):
-        # TODO
-        # stopwords = nltk.corpus.stopwords.words('english')
-        self._stopWordRemover = lambda tokens: tokens
+    def _prepareStopwords(self):
+        self._stopwords = nltk.corpus.stopwords.words('english')
 
     def _generateSentenceVectors(self):
         def _tokenizeSentence(sentenceText):
             tokens = map(self._stemmer.stem,
-                         self._stopWordRemover(
-                             self._wordTokenizer(sentenceText.lower())
-                         ))
+                         self._wordTokenizer(sentenceText.lower())
+                         )
 
             return tokens
 
         sentenceVectorizer = sklearn.feature_extraction.text.TfidfVectorizer(
                                 preprocessor=Sentence.getText,
                                 tokenizer=_tokenizeSentence,
+                                stop_words=self._stopwords,
                                 ngram_range=(1, 2)
                             )
 
