@@ -1,5 +1,6 @@
 class Sentence(object):
     def __init__(self, sentenceText):
+        global id
         self.setText(sentenceText)
 
     def setText(self, sentenceText):
@@ -7,9 +8,6 @@ class Sentence(object):
 
     def getText(self):
         return self._text
-
-    def getLowerText(self):
-        return self._text.lower()
 
     def setVector(self, vector):
         self._vector = vector

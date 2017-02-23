@@ -37,23 +37,28 @@ class Corpus(SentenceCollection):
         self._stopWordRemover = lambda tokens: tokens
 
     def _generateSentenceVectors(self):
-        def _processSentence(sentence):
+        def _tokenizeSentence(sentenceText):
             tokens = map(self._stemmer.stem,
                          self._stopWordRemover(
-                             self._wordTokenizer(sentence.getLowerText())
+                             self._wordTokenizer(sentenceText.lower())
                          ))
 
             return tokens
 
         sentenceVectorizer = sklearn.feature_extraction.text.TfidfVectorizer(
-                                analyzer=_processSentence,
+                                preprocessor=Sentence.getText,
+                                tokenizer=_tokenizeSentence,
+                                ngram_range=(1, 2)
                             )
 
-        sentenceVectors = sentenceVectorizer.fit_transform(
+        self._sentenceVectors = sentenceVectorizer.fit_transform(
                                     self._sentences
                                 )
 
-        map(Sentence.setVector, self._sentences, sentenceVectors)
+        map(Sentence.setVector, self._sentences, self._sentenceVectors)
+
+    def getSentenceVectors(self):
+        return self._sentenceVectors
 
     def load(self):
         files = map(lambda f: os.path.join(self._dirname, f),

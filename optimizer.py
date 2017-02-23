@@ -10,8 +10,10 @@ class Optimizer(object):
         summary = Summary()
         sentencesLeft = corpus.getSentences()
 
+        objective.setCorpus(corpus)
+
         while summary.size() < sizeBudget and len(sentencesLeft) > 0:
-            objectiveValues = map(objective.getObjective(summary, corpus),
+            objectiveValues = map(objective.getObjective(summary),
                                   sentencesLeft)
             maxObjectiveValue = max(objectiveValues)
 
