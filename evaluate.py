@@ -1,4 +1,3 @@
-import sys
 import os
 import tempfile
 import subprocess
@@ -65,12 +64,9 @@ def getRougeScore(summariesDir, refsDir):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        exit("Usage: %s <docs_path> <refs_path> <out_path>" % sys.argv[0])
-
-    parser = argparse.ArgumentParser(description='Evaluate the summarizer',
-                                     epilog='Set ROUGE_HOME enviromental ' +
-                                     'variable for this to work')
+    parser = argparse.ArgumentParser(
+            description='Evaluate the summarizer',
+            epilog='Set ROUGE_HOME enviromental variable for this to work')
     parser.add_argument('source_path',
                         help='Directory containing all the source files to ' +
                         'be summarized. Each set of documents are expected ' +
