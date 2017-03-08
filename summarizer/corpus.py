@@ -21,9 +21,7 @@ class Corpus(SentenceCollection):
         self._documents = []
 
     def _prepareSentenceSplitter(self):
-        self._sentenceSplitter = nltk.data.load(
-            'tokenizers/punkt/english.pickle'
-        ).tokenize
+        self._sentenceSplitter = lambda s: nltk.sent_tokenize(s, 'english')
 
     def _prepareTokenizer(self):
         self._wordTokenizer = nltk.word_tokenize
@@ -62,12 +60,17 @@ class Corpus(SentenceCollection):
         files = map(lambda f: os.path.join(self._dirname, f),
                     os.walk(self._dirname).next()[2])
 
+        sentences = []
+
         for filename in files:
             with open(filename) as f:
                 document = f.read().decode('utf-8')
 
                 self._documents.append(document)
-                self.addSentences(map(Sentence,
-                                      self._sentenceSplitter(document)))
+                # self.addSentences(map(Sentence,
+                sentences.extend(self._sentenceSplitter(document))
+
+        sentences = map(lambda s: s.strip(), sentences)
+        self.addSentences(map(Sentence, set(sentences)))
 
         self._generateSentenceVectors()
