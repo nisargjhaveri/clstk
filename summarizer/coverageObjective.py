@@ -4,8 +4,8 @@ from objective import Objective
 
 
 class CoverageObjective(Objective):
-    def __init__(self, alpha):
-        self.alpha = alpha
+    def __init__(self, alphaN):
+        self.alphaN = alphaN
 
     def _computeIndividualCoverage(self, sentenceIndex, sentenceList):
         return sum(
@@ -48,6 +48,10 @@ class CoverageObjective(Objective):
                 self._computeIndividualCoverage(sI, self._corpusSentenceList),
             xrange(self._corpusLenght)
         )
+
+        self.alpha = float(self.alphaN) / self._corpusLenght if (
+                            self.alphaN is not None
+                        ) else 1
 
     def getObjective(self, summary):
         def objective(sentence):

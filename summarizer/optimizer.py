@@ -24,12 +24,14 @@ class Optimizer(object):
             candidateSizes = map(Sentence.size, candidates)
             minSize = min(candidateSizes)
 
-            if summary.size() + minSize > sizeBudget:
-                break
-
             selectedCandidate = candidates[candidateSizes.index(minSize)]
-
-            summary.addSentence(selectedCandidate)
             sentencesLeft.remove(selectedCandidate)
+
+            if summary.size() + minSize <= sizeBudget:
+                summary.addSentence(selectedCandidate)
+
+            budgetLeft = sizeBudget - summary.size()
+            sentencesLeft = filter(lambda s: s.size() < budgetLeft,
+                                   sentencesLeft)
 
         return summary

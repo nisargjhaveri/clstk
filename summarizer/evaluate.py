@@ -34,7 +34,9 @@ def runRougeExternal(configFileName):
     rougeHome = os.getenv("ROUGE_HOME", ".")
     rougeExecutable = os.path.join(rougeHome, "ROUGE-1.5.5.pl")
 
-    command = [rougeExecutable] + "-a -n 2 -z SPL".split() + [configFileName]
+    command = ([rougeExecutable] +
+               "-n 2 -m -x -z SPL".split() +  # -f B
+               [configFileName])
 
     rougeOutput = subprocess.Popen(command)
     rougeOutput.communicate()
