@@ -1,11 +1,16 @@
 from objective import Objective
 
+import logging
+logger = logging.getLogger("aggregateObjective.py")
+
 
 class AggregateObjective(Objective):
     def __init__(self):
         self._objectives = []
 
     def addObjective(self, weight, objective):
+        logger.info("Adding objective `%s` with weight: %f",
+                    objective.__class__.__name__, weight)
         self._objectives.append((weight, objective))
 
     def setCorpus(self, corpus):

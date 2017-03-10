@@ -1,6 +1,9 @@
 from sentence import Sentence
 from summary import Summary
 
+import logging
+logger = logging.getLogger("optimizer.py")
+
 
 class Optimizer(object):
     def __init__(self):
@@ -12,6 +15,8 @@ class Optimizer(object):
 
         objective.setCorpus(corpus)
 
+        logger.info("Greedily optimizing the objective")
+        logger.info("Summary budget: %d", sizeBudget)
         while summary.size() < sizeBudget and len(sentencesLeft) > 0:
             objectiveValues = map(objective.getObjective(summary),
                                   sentencesLeft)
@@ -28,10 +33,14 @@ class Optimizer(object):
             sentencesLeft.remove(selectedCandidate)
 
             if summary.size() + minSize <= sizeBudget:
+                logger.info("Sentence added with objective value: %f, " +
+                            "size: %d", maxObjectiveValue, minSize)
                 summary.addSentence(selectedCandidate)
 
             budgetLeft = sizeBudget - summary.size()
             sentencesLeft = filter(lambda s: s.size() < budgetLeft,
                                    sentencesLeft)
+
+        logger.info("Optimization done, summary size: %d", summary.size())
 
         return summary

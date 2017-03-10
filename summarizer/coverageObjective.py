@@ -2,6 +2,9 @@ import sklearn.metrics.pairwise
 
 from objective import Objective
 
+import logging
+logger = logging.getLogger("coverageObjective.py")
+
 
 class CoverageObjective(Objective):
     def __init__(self, alphaN):
@@ -30,6 +33,7 @@ class CoverageObjective(Objective):
         return coverage
 
     def setCorpus(self, corpus):
+        logger.info("Preprocessing documents for coverage objective")
         self._corpus = corpus
 
         self._corpusSentenceList = corpus.getSentences()

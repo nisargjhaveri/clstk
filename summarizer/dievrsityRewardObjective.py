@@ -9,6 +9,9 @@ import numpy as np
 
 from objective import Objective
 
+import logging
+logger = logging.getLogger("diversityRewardObjective.py")
+
 
 class DiversityRewardObjective(Objective):
     def __init__(self, kN):
@@ -23,6 +26,7 @@ class DiversityRewardObjective(Objective):
                    ["-clustfile=" + clusterFileName] +
                    ["-clmethod=direct"])
 
+        logger.info("Running CLUTO: %s", " ".join(command))
         subprocess.check_output(command)
 
     def _computeClusters(self, sentenceVectors, NClusters):
@@ -30,6 +34,7 @@ class DiversityRewardObjective(Objective):
         matrixFileName = os.path.join(tmpDirName, "matrixFile")
         clusterFileName = os.path.join(tmpDirName, "clusterFile")
 
+        logger.info("Saving matrix file: %s", matrixFileName)
         np.savetxt(matrixFileName,
                    sentenceVectors.todense(),
                    header=" ".join(map(str, sentenceVectors.shape)),
@@ -39,12 +44,14 @@ class DiversityRewardObjective(Objective):
 
         self._sentenceIdClusters = [[] for _ in xrange(NClusters)]
 
+        logger.info("Reading clusters file: %s", clusterFileName)
         with open(clusterFileName) as clusterFile:
             for i, line in enumerate(clusterFile):
                 self._sentenceIdClusters[int(line)].append(
                     self._corpusSentenceList[i]
                 )
 
+        logger.info("Removing temporary directory: %s", tmpDirName)
         shutil.rmtree(tmpDirName)
 
     def _compute(self, summarySentences):
@@ -62,6 +69,7 @@ class DiversityRewardObjective(Objective):
         return diversityReward
 
     def setCorpus(self, corpus):
+        logger.info("Preprocessing documents for diversity reward objective")
         self._corpus = corpus
 
         self._corpusSentenceList = corpus.getSentences()
@@ -80,6 +88,8 @@ class DiversityRewardObjective(Objective):
 
         self.K = int(self.kN * self._corpusLenght)
 
+        logger.info("Clustering sentences")
+        logger.info("Number of clusters: %d", self.K)
         self.clusters = self._computeClusters(
             self._corpusSentenceVectos,
             self.K
