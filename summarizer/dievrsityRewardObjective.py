@@ -47,9 +47,7 @@ class DiversityRewardObjective(Objective):
         logger.info("Reading clusters file: %s", clusterFileName)
         with open(clusterFileName) as clusterFile:
             for i, line in enumerate(clusterFile):
-                self._sentenceIdClusters[int(line)].append(
-                    self._corpusSentenceList[i]
-                )
+                self._sentenceIdClusters[int(line)].append(i)
 
         logger.info("Removing temporary directory: %s", tmpDirName)
         shutil.rmtree(tmpDirName)
