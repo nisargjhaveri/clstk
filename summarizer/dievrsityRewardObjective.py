@@ -27,7 +27,8 @@ class DiversityRewardObjective(Objective):
                    ["-clmethod=direct"])
 
         logger.info("Running CLUTO: %s", " ".join(command))
-        subprocess.check_output(command)
+        clutoOutput = subprocess.check_output(command)
+        logger.info("\n" + clutoOutput)
 
     def _computeClusters(self, sentenceVectors, NClusters):
         tmpDirName = tempfile.mkdtemp()
