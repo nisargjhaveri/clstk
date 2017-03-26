@@ -3,7 +3,6 @@ import tempfile
 import subprocess
 import argparse
 
-from summarizer import summarize
 import utils
 
 
@@ -88,6 +87,8 @@ if __name__ == '__main__':
                         'summaries in summaries_path')
 
     args = parser.parse_args()
+
+    from summarizer import summarize
 
     if not args.only_rouge:
         summarizeAll(args.source_path, args.summaries_path)

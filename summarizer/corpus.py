@@ -30,7 +30,11 @@ class Corpus(SentenceCollection):
         self._stemmer = nltk.stem.PorterStemmer()
 
     def _prepareStopwords(self):
-        self._stopwords = nltk.corpus.stopwords.words('english')
+        self._stopwords = (
+            nltk.corpus.stopwords.words('english')
+            + ". , ; : ? ! ( ) [ ] \{ \}".split()
+            + "/ \ | ~ @ # $ % ^ & * _ - + = ` `` ' '' \" < >".split()
+        )
 
     def _generateSentenceVectors(self):
         def _tokenizeSentence(sentenceText):
@@ -67,7 +71,6 @@ class Corpus(SentenceCollection):
                 document = f.read().decode('utf-8')
 
                 self._documents.append(document)
-                # self.addSentences(map(Sentence,
                 sentences.extend(self._sentenceSplitter(document))
 
         sentences = map(lambda s: s.strip(), sentences)

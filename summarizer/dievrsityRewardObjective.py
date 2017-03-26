@@ -21,10 +21,11 @@ class DiversityRewardObjective(Objective):
         clutoPath = os.getenv("CLUTO_BIN_PATH", ".")
         clutoExecutable = os.path.join(clutoPath, "vcluster")
 
-        command = ([clutoExecutable] +
-                   [matrixFileName, str(NClusters)] +
-                   ["-clustfile=" + clusterFileName] +
-                   ["-clmethod=direct"])
+        command = ([clutoExecutable]
+                   + [matrixFileName, str(NClusters)]
+                   + ["-clustfile=" + clusterFileName])
+
+        # ["-clmethod=direct"])
 
         logger.info("Running CLUTO: %s", " ".join(command))
         clutoOutput = subprocess.check_output(command)

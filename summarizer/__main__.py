@@ -2,8 +2,6 @@ import argparse
 import logging
 from utils import colors
 
-from summarizer import summarize
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             description='Automatically summarize a set of documents')
@@ -29,6 +27,8 @@ if __name__ == '__main__':
                 '%(message)s'),
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+
+    from summarizer import summarize
 
     summary = summarize(args.source_directory)
     print summary.getFormattedSummary()
