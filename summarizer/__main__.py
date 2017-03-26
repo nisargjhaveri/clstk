@@ -1,10 +1,14 @@
 import argparse
 import logging
+
+from utils import Params
 from utils import colors
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-            description='Automatically summarize a set of documents')
+            parents=[Params.getParser()],
+            description='Automatically summarize a set of documents'
+        )
     parser.add_argument('source_directory',
                         help='Directory containing a set of files to be ' +
                         'summarized.')
@@ -28,7 +32,9 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
+    logging.info("Initializing summarizer")
+
     from summarizer import summarize
 
-    summary = summarize(args.source_directory)
+    summary = summarize(args.source_directory, Params.getParams(args))
     print summary.getFormattedSummary()

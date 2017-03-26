@@ -4,15 +4,16 @@ import subprocess
 import argparse
 
 import utils
+from utils import Params
 
 
-def runSummarizer(inDir, outFile):
-    summary = summarize(inDir)
+def runSummarizer(inDir, outFile, params):
+    summary = summarize(inDir, params)
     with open(outFile, "w") as f:
         f.write(summary.getFormattedSummary().encode('utf8'))
 
 
-def summarizeAll(docsDir, outDir):
+def summarizeAll(docsDir, outDir, params):
     dirNames = os.walk(docsDir).next()[1]
 
     utils.ensureDir(outDir)
@@ -24,7 +25,7 @@ def summarizeAll(docsDir, outDir):
         outFile = os.path.join(outDir, inDirName)
 
         print "Summarizing:", i + 1, "/", total, "\r",
-        runSummarizer(inDir, outFile)
+        runSummarizer(inDir, outFile, params)
 
     print
 
@@ -66,6 +67,7 @@ def getRougeScore(summariesDir, refsDir):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
+            parents=[Params.getParser()],
             description='Evaluate the summarizer',
             epilog='Set ROUGE_HOME enviromental variable for this to work')
     parser.add_argument('source_path',
@@ -91,6 +93,7 @@ if __name__ == '__main__':
     from summarizer import summarize
 
     if not args.only_rouge:
-        summarizeAll(args.source_path, args.summaries_path)
+        summarizeAll(args.source_path, args.summaries_path,
+                     Params.getParams(args))
 
     getRougeScore(args.summaries_path, args.models_path)

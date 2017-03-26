@@ -33,3 +33,46 @@ class colors:
     @staticmethod
     def enable():
         colors.disableColors = False
+
+
+class Params(object):
+    @staticmethod
+    def getParser():
+        import argparse
+        parser = argparse.ArgumentParser(add_help=False)
+
+        parser.add_argument(
+            '--coverage-lambda', type=float, default=1.0, metavar="lambda",
+            help='Coefficient for coverage objective')
+        parser.add_argument(
+            '--coverage-alpha', type=float, default=5.0, metavar="alphaN",
+            help='Threshold co-efficient to be used in coverage objective.'
+            + ' The co-efficient the  will be calucated as alphaN / N')
+
+        parser.add_argument(
+            '--diversity-lambda', type=float, default=6.0, metavar="lambda",
+            help='Coefficient for diversity objective')
+        parser.add_argument(
+            '--diversity-k', type=float, default=0.2, metavar="kN",
+            help='Number of clusters for diversity objective.'
+            + ' Number of clustres will be calucated as kN * N')
+
+        return parser
+
+    @staticmethod
+    def getParams(args=None):
+        if not args:
+            args = Params.getParser().parse_args([])
+
+        params = {
+            'coverage': {
+                'lambda': args.coverage_lambda,
+                'alphaN': args.coverage_alpha,
+            },
+            'diversity': {
+                'lambda': args.diversity_lambda,
+                'kN': args.diversity_k,
+            }
+        }
+
+        return params
