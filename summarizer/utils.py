@@ -45,7 +45,7 @@ class Params(object):
             '--coverage-lambda', type=float, default=1.0, metavar="lambda",
             help='Coefficient for coverage objective')
         parser.add_argument(
-            '--coverage-alpha', type=float, default=5.0, metavar="alphaN",
+            '--coverage-alpha', type=float, default=6.0, metavar="alphaN",
             help='Threshold co-efficient to be used in coverage objective.'
             + ' The co-efficient the  will be calucated as alphaN / N')
 
@@ -53,7 +53,7 @@ class Params(object):
             '--diversity-lambda', type=float, default=6.0, metavar="lambda",
             help='Coefficient for diversity objective')
         parser.add_argument(
-            '--diversity-k', type=float, default=0.2, metavar="kN",
+            '--diversity-k', type=float, default=0.1, metavar="kN",
             help='Number of clusters for diversity objective.'
             + ' Number of clustres will be calucated as kN * N')
 

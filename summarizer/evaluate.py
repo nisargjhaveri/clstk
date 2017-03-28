@@ -69,7 +69,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             parents=[Params.getParser()],
             description='Evaluate the summarizer',
-            epilog='Set ROUGE_HOME enviromental variable for this to work')
+            epilog='Set ROUGE_HOME environment variable for this to work')
     parser.add_argument('source_path',
                         help='Directory containing all the source files to ' +
                         'be summarized. Each set of documents are expected ' +
