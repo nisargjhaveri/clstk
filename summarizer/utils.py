@@ -42,6 +42,10 @@ class Params(object):
         parser = argparse.ArgumentParser(add_help=False)
 
         parser.add_argument(
+            '-s', '--size', type=int, default=665, metavar="N",
+            help='Maximum size of the summary')
+
+        parser.add_argument(
             '--coverage-lambda', type=float, default=1.0, metavar="lambda",
             help='Coefficient for coverage objective')
         parser.add_argument(
@@ -72,7 +76,8 @@ class Params(object):
             'diversity': {
                 'lambda': args.diversity_lambda,
                 'kN': args.diversity_k,
-            }
+            },
+            'size': args.size
         }
 
         return params

@@ -29,6 +29,6 @@ def summarize(inDir, params):
         )
 
     optimizer = Optimizer()
-    summary = optimizer.greedy(665, objective, c)
+    summary = optimizer.greedy(params["size"], objective, c)
 
     return summary
