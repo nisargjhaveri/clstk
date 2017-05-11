@@ -86,7 +86,7 @@ class DiversityRewardObjective(Objective):
 
         self._singletonRewards = self._similarities.mean(axis=1)
 
-        self.K = int(self.kN * self._corpusLenght)
+        self.K = int(math.ceil(self.kN * self._corpusLenght))
 
         logger.info("Clustering sentences")
         logger.info("Number of clusters: %d", self.K)
