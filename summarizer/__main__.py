@@ -37,4 +37,4 @@ if __name__ == '__main__':
     from summarizer import summarize
 
     summary = summarize(args.source_directory, Params.getParams(args))
-    print summary.getFormattedSummary()
+    print summary.getFormattedSummary().encode('utf-8')
