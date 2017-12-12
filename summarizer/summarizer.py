@@ -1,8 +1,9 @@
 from corpus import Corpus
 from optimizer import Optimizer
-from coverageObjective import CoverageObjective
-from dievrsityRewardObjective import DiversityRewardObjective
-from aggregateObjective import AggregateObjective
+
+from objectives import CoverageObjective
+from objectives import DiversityRewardObjective
+from objectives import AggregateObjective
 
 import logging
 logger = logging.getLogger("summarizer.py")

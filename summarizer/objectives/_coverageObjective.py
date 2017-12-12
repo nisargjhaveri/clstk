@@ -1,6 +1,6 @@
 import sklearn.metrics.pairwise
 
-from objective import Objective
+from ._objective import Objective
 
 import logging
 logger = logging.getLogger("coverageObjective.py")

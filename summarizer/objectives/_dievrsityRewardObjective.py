@@ -7,7 +7,7 @@ import shutil
 import sklearn.metrics.pairwise
 import numpy as np
 
-from objective import Objective
+from ._objective import Objective
 
 import logging
 logger = logging.getLogger("diversityRewardObjective.py")
