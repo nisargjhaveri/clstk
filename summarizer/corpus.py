@@ -77,3 +77,5 @@ class Corpus(SentenceCollection):
         self.addSentences(map(Sentence, set(sentences)))
 
         self._generateSentenceVectors()
+
+        return self

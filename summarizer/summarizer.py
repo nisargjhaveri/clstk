@@ -11,8 +11,7 @@ logger = logging.getLogger("summarizer.py")
 
 def summarize(inDir, params):
     logger.info("Loading documents from %s", inDir)
-    c = Corpus(inDir)
-    c.load()
+    c = Corpus(inDir).load()
 
     logger.info("Setting up summarizer")
     objective = AggregateObjective()
