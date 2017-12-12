@@ -6,3 +6,8 @@ class Objective(object):
         # Should return a function that takes a sentence and
         # returns objective value
         raise NotImplementedError("To be implemented by all subclasses")
+
+    @staticmethod
+    def getParams():
+        # Should return list of .utils.Param
+        return []

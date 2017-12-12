@@ -1,4 +1,5 @@
 import os
+import objectives.utils
 
 
 def ensureDir(dirname):
@@ -45,21 +46,7 @@ class Params(object):
             '-s', '--size', type=int, default=665, metavar="N",
             help='Maximum size of the summary')
 
-        parser.add_argument(
-            '--coverage-lambda', type=float, default=1.0, metavar="lambda",
-            help='Coefficient for coverage objective')
-        parser.add_argument(
-            '--coverage-alpha', type=float, default=6.0, metavar="alphaN",
-            help='Threshold co-efficient to be used in coverage objective.'
-            + ' The co-efficient the  will be calucated as alphaN / N')
-
-        parser.add_argument(
-            '--diversity-lambda', type=float, default=6.0, metavar="lambda",
-            help='Coefficient for diversity objective')
-        parser.add_argument(
-            '--diversity-k', type=float, default=0.1, metavar="kN",
-            help='Number of clusters for diversity objective.'
-            + ' Number of clustres will be calucated as kN * N')
+        objectives.utils.addObjectiveParams(parser)
 
         return parser
 
@@ -69,14 +56,7 @@ class Params(object):
             args = Params.getParser().parse_args([])
 
         params = {
-            'coverage': {
-                'lambda': args.coverage_lambda,
-                'alphaN': args.coverage_alpha,
-            },
-            'diversity': {
-                'lambda': args.diversity_lambda,
-                'kN': args.diversity_k,
-            },
+            'objectives': objectives.utils.getParams(args),
             'size': args.size
         }
 

@@ -7,6 +7,7 @@ import shutil
 import sklearn.metrics.pairwise
 import numpy as np
 
+import utils
 from ._objective import Objective
 
 import logging
@@ -14,8 +15,18 @@ logger = logging.getLogger("diversityRewardObjective.py")
 
 
 class DiversityRewardObjective(Objective):
-    def __init__(self, kN):
-        self.kN = kN
+    def __init__(self, params):
+        self.kN = params['k']
+
+    @staticmethod
+    def getParams():
+        return [
+            utils.Param(
+                'k', type=float, default=0.1, metavar="kN",
+                help='Number of clusters for diversity objective.'
+                + ' Number of clustres will be calucated as kN * N'
+            )
+        ]
 
     def _executeCLUTO(self, matrixFileName, clusterFileName, NClusters):
         clutoPath = os.getenv("CLUTO_BIN_PATH", ".")

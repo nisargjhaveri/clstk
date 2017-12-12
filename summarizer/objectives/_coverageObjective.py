@@ -1,5 +1,6 @@
 import sklearn.metrics.pairwise
 
+import utils
 from ._objective import Objective
 
 import logging
@@ -7,8 +8,18 @@ logger = logging.getLogger("coverageObjective.py")
 
 
 class CoverageObjective(Objective):
-    def __init__(self, alphaN):
-        self.alphaN = alphaN
+    def __init__(self, params):
+        self.alphaN = params['alpha']
+
+    @staticmethod
+    def getParams():
+        return [
+            utils.Param(
+                'alpha', type=float, default=6.0, metavar="alphaN",
+                help='Threshold co-efficient to be used in coverage objective.'
+                + ' The co-efficient the  will be calucated as alphaN / N'
+            )
+        ]
 
     def _computeIndividualCoverage(self, sentenceIndex, sentenceList):
         return sum(

@@ -1,8 +1,6 @@
 from corpus import Corpus
 from optimizer import Optimizer
 
-from objectives import CoverageObjective
-from objectives import DiversityRewardObjective
 from objectives import AggregateObjective
 
 import logging
@@ -14,19 +12,7 @@ def summarize(inDir, params):
     c = Corpus(inDir).load()
 
     logger.info("Setting up summarizer")
-    objective = AggregateObjective()
-
-    if params["coverage"]["lambda"] > 0:
-        objective.addObjective(
-            params["coverage"]["lambda"],
-            CoverageObjective(params["coverage"]["alphaN"])
-        )
-
-    if params["diversity"]["lambda"] > 0:
-        objective.addObjective(
-            params["diversity"]["lambda"],
-            DiversityRewardObjective(params["diversity"]["kN"])
-        )
+    objective = AggregateObjective(params['objectives'])
 
     optimizer = Optimizer()
     summary = optimizer.greedy(params["size"], objective, c)
