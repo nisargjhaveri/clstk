@@ -1,12 +1,12 @@
 import argparse
 import logging
 
-from utils import Params
-from utils import colors
+from summarizer.utils import params
+from summarizer.utils import colors
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-            parents=[Params.getParser()],
+            parents=[params.getParser()],
             description='Automatically summarize a set of documents'
         )
     parser.add_argument('source_directory',
@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     logging.info("Initializing summarizer")
 
-    from summarizer import summarize
+    from summarizer.summarizer import summarize
 
-    summary = summarize(args.source_directory, Params.getParams(args))
+    summary = summarize(args.source_directory, params.getParams(args))
     print summary.getFormattedSummary().encode('utf-8')

@@ -7,7 +7,7 @@ import shutil
 import sklearn.metrics.pairwise
 import numpy as np
 
-import utils
+from ..utils.param import Param
 from ._objective import Objective
 
 import logging
@@ -21,7 +21,7 @@ class DiversityRewardObjective(Objective):
     @staticmethod
     def getParams():
         return [
-            utils.Param(
+            Param(
                 'k', type=float, default=0.1, metavar="kN",
                 help='Number of clusters for diversity objective.'
                 + ' Number of clustres will be calucated as kN * N'

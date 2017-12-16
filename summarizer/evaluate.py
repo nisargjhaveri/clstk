@@ -3,8 +3,8 @@ import tempfile
 import subprocess
 import argparse
 
-import utils
-from utils import Params
+from summarizer.utils import fs
+from summarizer.utils import params as Params
 
 
 def runSummarizer(inDir, outFile, params):
@@ -16,7 +16,7 @@ def runSummarizer(inDir, outFile, params):
 def summarizeAll(docsDir, outDir, params):
     dirNames = os.walk(docsDir).next()[1]
 
-    utils.ensureDir(outDir)
+    fs.ensureDir(outDir)
 
     total = len(dirNames)
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    from summarizer import summarize
+    from summarizer.summarizer import summarize
 
     if not args.only_rouge:
         summarizeAll(args.source_path, args.summaries_path,

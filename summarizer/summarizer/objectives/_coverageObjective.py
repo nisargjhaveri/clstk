@@ -1,6 +1,6 @@
 import sklearn.metrics.pairwise
 
-import utils
+from ..utils.param import Param
 from ._objective import Objective
 
 import logging
@@ -14,7 +14,7 @@ class CoverageObjective(Objective):
     @staticmethod
     def getParams():
         return [
-            utils.Param(
+            Param(
                 'alpha', type=float, default=6.0, metavar="alphaN",
                 help='Threshold co-efficient to be used in coverage objective.'
                 + ' The co-efficient the  will be calucated as alphaN / N'
