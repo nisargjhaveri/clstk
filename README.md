@@ -12,10 +12,11 @@ $ git clone https://github.com/nisargjhaveri/summarizer
 - scipy
 - sklearn
 - nltk
+- requests
 
 Use your preferred method. You may use `pip` as followed.
 ```
-$ pip install nltk numpy scipy sklearn
+$ pip install nltk numpy scipy sklearn requests
 ```
 
 Also install nltk packages called `stopwords` and `punkt`.

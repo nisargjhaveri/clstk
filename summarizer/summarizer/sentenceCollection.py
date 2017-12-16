@@ -1,4 +1,5 @@
 from sentence import Sentence
+from translate.googleTranslate import translate
 
 
 class SentenceCollection(object):
@@ -16,3 +17,9 @@ class SentenceCollection(object):
 
     def getSentences(self):
         return self._sentences[:]
+
+    def translateCollection(self, sourceLang, targetLang):
+        text = "\n".join(map(Sentence.getText, self._sentences))
+        translation, _ = translate(text, sourceLang, targetLang)
+
+        map(Sentence.setTranslation, self._sentences, translation.split("\n"))

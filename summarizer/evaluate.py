@@ -10,7 +10,7 @@ from summarizer.utils import params as Params
 def runSummarizer(inDir, outFile, params):
     summary = summarize(inDir, params)
     with open(outFile, "w") as f:
-        f.write(summary.getFormattedSummary().encode('utf8'))
+        f.write(summary.getTargetSummary().encode('utf8'))
 
 
 def summarizeAll(docsDir, outDir, params):

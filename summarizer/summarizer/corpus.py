@@ -60,7 +60,8 @@ class Corpus(SentenceCollection):
     def getSentenceVectors(self):
         return self._sentenceVectors
 
-    def load(self):
+    def load(self, params):
+        # load corpus
         files = map(lambda f: os.path.join(self._dirname, f),
                     os.walk(self._dirname).next()[2])
 
@@ -76,6 +77,7 @@ class Corpus(SentenceCollection):
         sentences = map(lambda s: s.strip(), sentences)
         self.addSentences(map(Sentence, set(sentences)))
 
+        # preprocess corpus
         self._generateSentenceVectors()
 
         return self

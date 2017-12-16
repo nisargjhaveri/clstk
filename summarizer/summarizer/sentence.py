@@ -1,7 +1,7 @@
 class Sentence(object):
     def __init__(self, sentenceText):
-        global id
         self.setText(sentenceText)
+        self.setTranslation(sentenceText)
 
     def setText(self, sentenceText):
         self._text = sentenceText.strip()
@@ -14,6 +14,12 @@ class Sentence(object):
 
     def getVector(self):
         return self._vector
+
+    def setTranslation(self, translation):
+        self._translation = translation
+
+    def getTranslation(self):
+        return self._translation
 
     def size(self):
         return len(self._text)

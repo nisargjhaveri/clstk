@@ -9,6 +9,11 @@ def getParser():
         '-s', '--size', type=int, default=665, metavar="N",
         help='Maximum size of the summary')
 
+    parser.add_argument(
+        '-l', '--target-lang', type=str, default=None, metavar="lang",
+        help='Two-letter language code to generate cross-lingual summary. ' +
+             'Source language is assumed to be English.')
+
     utils.addObjectiveParams(parser)
 
     return parser
@@ -20,7 +25,9 @@ def getParams(args=None):
 
     params = {
         'objectives': utils.getParams(args),
-        'size': args.size
+        'size': args.size,
+        'sourceLang': 'en',
+        'targetLang': args.target_lang or 'en'
     }
 
     return params
