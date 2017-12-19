@@ -21,7 +21,10 @@ class Corpus(SentenceCollection):
         self._documents = []
 
     def _prepareSentenceSplitter(self):
-        self._sentenceSplitter = lambda s: nltk.sent_tokenize(s, 'english')
+        self._sentenceSplitter = lambda doc: sum(
+            map(lambda p: nltk.sent_tokenize(p, 'english'), doc.split("\n")),
+            []
+        )
 
     def _prepareTokenizer(self):
         self._wordTokenizer = nltk.word_tokenize

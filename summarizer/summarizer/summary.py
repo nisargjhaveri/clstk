@@ -2,8 +2,11 @@ from sentenceCollection import SentenceCollection
 
 
 class Summary(SentenceCollection):
-    def size(self):
-        return sum(map(lambda s: s.size(), self._sentences))
+    def charCount(self):
+        return sum(map(lambda s: s.charCount(), self._sentences))
+
+    def tokenCount(self):
+        return sum(map(lambda s: s.tokenCount(), self._sentences))
 
     def getSummary(self):
         return "\n".join(map(lambda s: s.getText(), self._sentences))

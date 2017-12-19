@@ -1,4 +1,3 @@
-from sentence import Sentence
 from summary import Summary
 
 import logging
@@ -15,9 +14,18 @@ class Optimizer(object):
 
         objective.setCorpus(corpus)
 
+        sizeBudget, countTokens = sizeBudget
+        sizeName = "tokens" if countTokens else "chars"
+
+        def sentenceSize(sent):
+            return sent.tokenCount() if countTokens else sent.charCount()
+
+        def summarySize(summary):
+            return summary.tokenCount() if countTokens else summary.charCount()
+
         logger.info("Greedily optimizing the objective")
-        logger.info("Summary budget: %d", sizeBudget)
-        while summary.size() < sizeBudget and len(sentencesLeft) > 0:
+        logger.info("Summary budget: %d %s", sizeBudget, sizeName)
+        while summarySize(summary) < sizeBudget and len(sentencesLeft) > 0:
             objectiveValues = map(objective.getObjective(summary),
                                   sentencesLeft)
             maxObjectiveValue = max(objectiveValues)
@@ -26,21 +34,22 @@ class Optimizer(object):
                           for i, v in enumerate(objectiveValues)
                           if v == maxObjectiveValue]
 
-            candidateSizes = map(Sentence.size, candidates)
+            candidateSizes = map(sentenceSize, candidates)
             minSize = min(candidateSizes)
 
             selectedCandidate = candidates[candidateSizes.index(minSize)]
             sentencesLeft.remove(selectedCandidate)
 
-            if summary.size() + minSize <= sizeBudget:
+            if summarySize(summary) + minSize <= sizeBudget:
                 logger.info("Sentence added with objective value: %f, " +
                             "size: %d", maxObjectiveValue, minSize)
                 summary.addSentence(selectedCandidate)
 
-            budgetLeft = sizeBudget - summary.size()
-            sentencesLeft = filter(lambda s: s.size() < budgetLeft,
+            budgetLeft = sizeBudget - summarySize(summary)
+            sentencesLeft = filter(lambda s: sentenceSize(s) < budgetLeft,
                                    sentencesLeft)
 
-        logger.info("Optimization done, summary size: %d", summary.size())
+        logger.info("Optimization done, summary size: %d chars, %d tokens",
+                    summary.charCount(), summary.tokenCount())
 
         return summary

@@ -1,3 +1,6 @@
+import nltk
+
+
 class Sentence(object):
     def __init__(self, sentenceText):
         self.setText(sentenceText)
@@ -9,6 +12,9 @@ class Sentence(object):
     def getText(self):
         return self._text
 
+    def getTokens(self):
+        return self._tokens
+
     def setVector(self, vector):
         self._vector = vector
 
@@ -18,8 +24,13 @@ class Sentence(object):
     def setTranslation(self, translation):
         self._translation = translation
 
+        self._translationTokens = nltk.word_tokenize(self._text)
+
     def getTranslation(self):
         return self._translation
 
-    def size(self):
+    def charCount(self):
         return len(self._text)
+
+    def tokenCount(self):
+        return len(self._translationTokens)
