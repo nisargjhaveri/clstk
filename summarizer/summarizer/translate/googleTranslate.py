@@ -53,7 +53,7 @@ def _sM(a):
                 else:
                     e.append(l >> 12 | 224)
                     e.append(l >> 6 & 63 | 128)
-                e.append(l & 63 | 128)
+            e.append(l & 63 | 128)
         g += 1
     a = b
     for f in xrange(len(e)):
@@ -92,7 +92,7 @@ def _getToken(text):
     # Update token if needed
     now = int(time.time() / 3600000)
     if int(window['TKK'].split('.')[0]) != now:
-        r = requests.get('http://translate.google.com')
+        r = requests.get('https://translate.google.com')
 
         TKK = _evalTKK(re.findall(r"TKK=(.*?)\(\)\)'\);", r.text)[0])
         window['TKK'] = TKK
@@ -112,10 +112,10 @@ def _translateText(text, source, target):
 
         half = len(lines) / 2
 
-        translation1, sentences1 = translate("\n".join(lines[:half]),
-                                             source, target)
-        translation2, sentences2 = translate("\n".join(lines[half:]),
-                                             source, target)
+        translation1, sentences1 = _translateText("\n".join(lines[:half]),
+                                                  source, target)
+        translation2, sentences2 = _translateText("\n".join(lines[half:]),
+                                                  source, target)
 
         return (
             "\n".join([translation1, translation2]), sentences1 + sentences2
