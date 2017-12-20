@@ -24,10 +24,13 @@ class Sentence(object):
     def setTranslation(self, translation):
         self._translation = translation
 
-        self._translationTokens = nltk.word_tokenize(self._text)
+        self._translationTokens = nltk.word_tokenize(self._translation)
 
     def getTranslation(self):
         return self._translation
+
+    def getTranslationTokens(self):
+        return self._translationTokens
 
     def charCount(self):
         return len(self._text)

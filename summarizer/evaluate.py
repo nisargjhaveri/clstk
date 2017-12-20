@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 import subprocess
 import argparse
@@ -25,6 +26,7 @@ def summarizeAll(docsDir, outDir, params):
         outFile = os.path.join(outDir, inDirName)
 
         print "Summarizing:", i + 1, "/", total, "\r",
+        sys.stdout.flush()
         runSummarizer(inDir, outFile, params)
 
     print
