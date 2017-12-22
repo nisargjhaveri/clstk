@@ -1,4 +1,6 @@
-import nltk
+from utils import nlp
+
+tokenize = nlp.getTokenizer()
 
 
 class Sentence(object):
@@ -12,9 +14,6 @@ class Sentence(object):
     def getText(self):
         return self._text
 
-    def getTokens(self):
-        return self._tokens
-
     def setVector(self, vector):
         self._vector = vector
 
@@ -24,10 +23,11 @@ class Sentence(object):
     def setTranslation(self, translation):
         self._translation = translation
 
-        self._translationTokens = nltk.word_tokenize(self._translation)
+        self._translationTokens = tokenize(self._translation)
 
     def getTranslation(self):
-        return self._translation
+        return " ".join(self._translationTokens)
+        # return self._translation
 
     def getTranslationTokens(self):
         return self._translationTokens

@@ -6,6 +6,9 @@ import argparse
 
 from summarizer.utils import fs
 from summarizer.utils import params as Params
+from summarizer.utils import nlp
+
+from summarizer.evaluation import RougeScore
 
 
 def runSummarizer(inDir, outFile, params):
@@ -47,6 +50,7 @@ def runRougeExternal(configFileName):
 def getRougeScore(summariesDir, refsDir):
     configFile = tempfile.NamedTemporaryFile(mode='w', suffix=".lst",
                                              delete=False)
+    summaryRefsList = []
 
     summaryNames = os.walk(summariesDir).next()[2]
 
@@ -58,11 +62,15 @@ def getRougeScore(summariesDir, refsDir):
 
         rougeEvalrule = [summaryPath] + refPaths
 
+        summaryRefsList.append((summaryPath, refPaths))
+
         configFile.write(" ".join(rougeEvalrule) + "\n")
 
     configFile.close()
 
     runRougeExternal(configFile.name)
+    print "-"
+    RougeScore(stemmer=nlp.getStemmer()).rouge(summaryRefsList)
 
     os.unlink(configFile.name)
 

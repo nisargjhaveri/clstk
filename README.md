@@ -13,6 +13,7 @@ $ git clone https://github.com/nisargjhaveri/summarizer
 - sklearn
 - nltk
 - requests
+- polyglot
 
 Use your preferred method. You may use `pip` as followed.
 ```
@@ -32,6 +33,11 @@ This is required only if you plan to evaluate the summaries using ROUGE score. Y
 Obtain and setup ROUGE 1.5.5 according to the instructions there.
 
 Set an environment variable `ROUGE_HOME` with the path to ROUGE root directory, the one containing `ROUGE-1.5.5.pl` file.
+
+### Setup Stanford CoreNLP
+https://stanfordnlp.github.io/CoreNLP/index.html#download
+
+Get and setup Stanford CoreNLP and set an environment variable `CORENLP_JAR` with the path to `stanford-corenlp-*.jar` file
 
 ## Use
 Once the setup is done, you should be able to use it.

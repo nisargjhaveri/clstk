@@ -6,6 +6,8 @@ import sklearn
 from sentence import Sentence
 from sentenceCollection import SentenceCollection
 
+from utils import nlp
+
 
 class Corpus(SentenceCollection):
     def __init__(self, dirname):
@@ -27,10 +29,10 @@ class Corpus(SentenceCollection):
         )
 
     def _prepareTokenizer(self):
-        self._wordTokenizer = nltk.word_tokenize
+        self._wordTokenizer = nlp.getTokenizer()
 
     def _prepareStemmer(self):
-        self._stemmer = nltk.stem.PorterStemmer()
+        self._stemmer = nlp.getStemmer()
 
     def _prepareStopwords(self):
         self._stopwords = (
