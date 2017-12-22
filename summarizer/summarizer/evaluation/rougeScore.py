@@ -72,75 +72,6 @@ class RougeScore(object):
             result += min(v, counter2[k])
         return result
 
-    def _len_lcs(self, x, y):
-        """
-        Returns the length of the Longest Common Subsequence between sequences
-        x and y.
-        Source:
-            http://www.algorithmist.com/index.php/Longest_Common_Subsequence
-        Args:
-            x: sequence of words
-            y: sequence of words
-        Returns
-            integer: Length of LCS between x and y
-        """
-        table = self._lcs(x, y)
-        n, m = len(x), len(y)
-        return table[n, m]
-
-    def _lcs(self, x, y):
-        """
-        Computes the length of the longest common subsequence (lcs) between two
-        strings. The implementation below uses a DP programming algorithm and
-        runs in O(nm) time where n = len(x) and m = len(y).
-        Source:
-            http://www.algorithmist.com/index.php/Longest_Common_Subsequence
-        Args:
-            x: collection of words
-            y: collection of words
-        Returns:
-            Table of dictionary of coord and len lcs
-        """
-        n, m = len(x), len(y)
-        table = dict()
-        for i in range(n + 1):
-            for j in range(m + 1):
-                if i == 0 or j == 0:
-                    table[i, j] = 0
-                elif x[i - 1] == y[j - 1]:
-                    table[i, j] = table[i - 1, j - 1] + 1
-                else:
-                    table[i, j] = max(table[i - 1, j], table[i, j - 1])
-        return table
-
-    def _recon_lcs(self, x, y):
-        """
-        Returns the Longest Subsequence between x and y.
-        Source:
-            http://www.algorithmist.com/index.php/Longest_Common_Subsequence
-        Args:
-            x: sequence of words
-            y: sequence of words
-        Returns:
-            sequence: LCS of x and y
-        """
-        i, j = len(x), len(y)
-        table = self._lcs(x, y)
-
-        def _recon(i, j):
-            """private recon calculation"""
-            if i == 0 or j == 0:
-                return []
-            elif x[i - 1] == y[j - 1]:
-                return _recon(i - 1, j - 1) + [(x[i - 1], i)]
-            elif table[i - 1, j] > table[i, j - 1]:
-                return _recon(i - 1, j)
-            else:
-                return _recon(i, j - 1)
-
-        recon_tuple = tuple(map(lambda x: x[0], _recon(i, j)))
-        return recon_tuple
-
     def rouge_n(self, summary, model_summaries, n=2):
         """
         Computes ROUGE-N of two text collections of sentences.
@@ -185,26 +116,46 @@ class RougeScore(object):
 
         return f1_score, precision, recall
 
-    def _f_p_r_lcs(self, llcs, m, n):
+    def _len_lcs(self, x, y):
         """
-        Computes the LCS-based F-measure score
+        Returns the length of the Longest Common Subsequence between sequences
+        x and y.
         Source:
-            http://research.microsoft.com/en-us/um/people/cyl/download/papers/
-        rouge-working-note-v1.3.1.pdf
+            http://www.algorithmist.com/index.php/Longest_Common_Subsequence
         Args:
-            llcs: Length of LCS
-            m: number of words in reference summary
-            n: number of words in candidate summary
-        Returns:
-            Float. LCS-based F-measure score
+            x: sequence of words
+            y: sequence of words
+        Returns
+            integer: Length of LCS between x and y
         """
-        r_lcs = llcs / m
-        p_lcs = llcs / n
-        beta = p_lcs / (r_lcs + 1e-12)
-        num = (1 + (beta**2)) * r_lcs * p_lcs
-        denom = r_lcs + ((beta**2) * p_lcs)
-        f_lcs = num / (denom + 1e-12)
-        return f_lcs, p_lcs, r_lcs
+        table = self._lcs(x, y)
+        n, m = len(x), len(y)
+        return table[n, m]
+
+    def _lcs(self, x, y):
+        """
+        Computes the length of the longest common subsequence (lcs) between two
+        strings. The implementation below uses a DP programming algorithm and
+        runs in O(nm) time where n = len(x) and m = len(y).
+        Source:
+            http://www.algorithmist.com/index.php/Longest_Common_Subsequence
+        Args:
+            x: collection of words
+            y: collection of words
+        Returns:
+            Table of dictionary of coord and len lcs
+        """
+        n, m = len(x), len(y)
+        table = dict()
+        for i in range(n + 1):
+            for j in range(m + 1):
+                if i == 0 or j == 0:
+                    table[i, j] = 0
+                elif x[i - 1] == y[j - 1]:
+                    table[i, j] = table[i - 1, j - 1] + 1
+                else:
+                    table[i, j] = max(table[i - 1, j], table[i, j - 1])
+        return table
 
     def rouge_l_sentence_level(self, evaluated_sentences, reference_sentences):
         """
@@ -237,6 +188,55 @@ class RougeScore(object):
         n = len(evaluated_words)
         lcs = self._len_lcs(evaluated_words, reference_words)
         return self._f_p_r_lcs(lcs, m, n)
+
+    def _f_p_r_lcs(self, llcs, m, n):
+        """
+        Computes the LCS-based F-measure score
+        Source:
+            http://research.microsoft.com/en-us/um/people/cyl/download/papers/
+        rouge-working-note-v1.3.1.pdf
+        Args:
+            llcs: Length of LCS
+            m: number of words in reference summary
+            n: number of words in candidate summary
+        Returns:
+            Float. LCS-based F-measure score
+        """
+        r_lcs = llcs / m
+        p_lcs = llcs / n
+        beta = p_lcs / (r_lcs + 1e-12)
+        num = (1 + (beta**2)) * r_lcs * p_lcs
+        denom = r_lcs + ((beta**2) * p_lcs)
+        f_lcs = num / (denom + 1e-12)
+        return f_lcs, p_lcs, r_lcs
+
+    def _recon_lcs(self, x, y):
+        """
+        Returns the Longest Subsequence between x and y.
+        Source:
+            http://www.algorithmist.com/index.php/Longest_Common_Subsequence
+        Args:
+            x: sequence of words
+            y: sequence of words
+        Returns:
+            sequence: LCS of x and y
+        """
+        i, j = len(x), len(y)
+        table = self._lcs(x, y)
+
+        def _recon(i, j):
+            """private recon calculation"""
+            if i == 0 or j == 0:
+                return []
+            elif x[i - 1] == y[j - 1]:
+                return _recon(i - 1, j - 1) + [(x[i - 1], i)]
+            elif table[i - 1, j] > table[i, j - 1]:
+                return _recon(i - 1, j)
+            else:
+                return _recon(i, j - 1)
+
+        recon_tuple = tuple(map(lambda x: x[0], _recon(i, j)))
+        return recon_tuple
 
     def _union_lcs(self, evaluated_sentences, reference_sentence):
         """
@@ -331,7 +331,7 @@ class RougeScore(object):
 
         rouge_1_all = []
         rouge_2_all = []
-        # rouge_l_all = []
+        rouge_l_all = []
 
         for hyp_refs_pair in hyp_refs_pairs:
             hyp_path, ref_paths = hyp_refs_pair
@@ -349,22 +349,11 @@ class RougeScore(object):
 
             rouge_2_all.append(self.rouge_n(hyp, refs, 2))
 
-            # rouge_l = [
-            #     self.rouge_l_sentence_level(hyp, ref) for ref in refs
-            # ]
-            # rouge_l_all.append(map(np.mean, zip(*rouge_l)))
+            rouge_l = [
+                self.rouge_l_sentence_level(hyp, ref) for ref in refs
+            ]
+            rouge_l_all.append(map(np.mean, zip(*rouge_l)))
 
         self._print_result("1", rouge_1_all, print_all)
         self._print_result("2", rouge_2_all, print_all)
-
-        # rouge_f, rouge_p, rouge_r = map(np.mean, zip(*rouge_l_all))
-        # print("ROUGE-L Average  R:%0.5f  P:%0.5f  F:%0.5f"
-        #       % (rouge_r, rouge_p, rouge_f))
-        #
-        # if print_all:
-        #     print("---------------------------------")
-        #     for i, rouge in enumerate(rouge_l_all):
-        #         rouge_f, rouge_p, rouge_r = rouge
-        #         print("ROUGE-L Eval %d  R:%0.5f  P:%0.5f  F:%0.5f"
-        #               % (i, rouge_r, rouge_p, rouge_f))
-        #     print("---------------------------------")
+        self._print_result("L", rouge_l_all, print_all)
