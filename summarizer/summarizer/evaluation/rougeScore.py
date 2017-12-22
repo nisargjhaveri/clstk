@@ -7,7 +7,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import collections
+import six
+
 import numpy as np
+import re
 
 
 class RougeScore(object):
@@ -16,7 +20,17 @@ class RougeScore(object):
         self._stemmer = stemmer if stemmer else self.dummy_stemmer
 
     def dummy_tokenizer(self, sentence):
-        return sentence.split(" ")
+        sentence = re.sub(r'-', ' - ', sentence)
+        sentence = re.sub(r'[^A-Za-z0-9\-]', ' ', sentence)
+        sentence = re.sub(r'^\s+', '', sentence)
+        sentence = re.sub(r'\s+$', '', sentence)
+        sentence = re.sub(r'\s+', ' ', sentence)
+        sentence = sentence.strip().lower()
+
+        r = re.compile(r'^[a-z0-9]')
+
+        return filter(r.match, re.split(r'\s+', sentence))
+        # return sentence.split()
 
     def dummy_stemmer(self, token):
         return token
@@ -29,12 +43,12 @@ class RougeScore(object):
         Returns:
             A set of n-grams
         """
-        ngram_set = set()
+        ngram_list = list()
         text_length = len(text)
         max_index_ngram_start = text_length - n
         for i in range(max_index_ngram_start + 1):
-            ngram_set.add(tuple(text[i:i + n]))
-        return ngram_set
+            ngram_list.append(tuple(text[i:i + n]))
+        return ngram_list
 
     def _split_into_words(self, sentences):
         """Splits multiple sentences into words and flattens the result"""
@@ -48,6 +62,15 @@ class RougeScore(object):
 
         words = self._split_into_words(sentences)
         return self._get_ngrams(n, words)
+
+    def _count_overlap(self, ngrams1, ngrams2):
+        counter1 = collections.Counter(ngrams1)
+        counter2 = collections.Counter(ngrams2)
+
+        result = 0
+        for k, v in six.iteritems(counter1):
+            result += min(v, counter2[k])
+        return result
 
     def _len_lcs(self, x, y):
         """
@@ -118,48 +141,48 @@ class RougeScore(object):
         recon_tuple = tuple(map(lambda x: x[0], _recon(i, j)))
         return recon_tuple
 
-    def rouge_n(self, evaluated_sentences, reference_sentences, n=2):
+    def rouge_n(self, summary, model_summaries, n=2):
         """
         Computes ROUGE-N of two text collections of sentences.
         Sourece: http://research.microsoft.com/en-us/um/people/cyl/download/
         papers/rouge-working-note-v1.3.1.pdf
         Args:
-            evaluated_sentences: The sentences that have been picked by the
-                                 summarizer
-            reference_sentences: The sentences from the referene set
+            summary: The sentences that have been picked by the
+                     summarizer
+            model_summaries: List of reference summaries, each containing
+                             list of sentences
             n: Size of ngram.    Defaults to 2.
         Returns:
             A tuple (f1, precision, recall) for ROUGE-N
         Raises:
             ValueError: raises exception if a param has len <= 0
         """
-        if len(evaluated_sentences) <= 0 or len(reference_sentences) <= 0:
+        if len(summary) <= 0 or len(model_summaries) <= 0:
             raise ValueError("Collections must contain at least 1 sentence.")
 
-        evaluated_ngrams = self._get_word_ngrams(n, evaluated_sentences)
-        reference_ngrams = self._get_word_ngrams(n, reference_sentences)
-        reference_count = len(reference_ngrams)
-        evaluated_count = len(evaluated_ngrams)
+        summary_ngrams = self._get_word_ngrams(n, summary)
 
-        # Gets the overlapping ngrams between evaluated and reference
-        overlapping_ngrams = evaluated_ngrams.intersection(reference_ngrams)
-        overlapping_count = len(overlapping_ngrams)
+        summary_count = 0
+        model_count = 0
+        overlap_count = 0
+
+        for model in model_summaries:
+            model_ngrams = self._get_word_ngrams(n, model)
+            model_count += len(model_ngrams)
+            summary_count += len(summary_ngrams)
+
+            # Gets the overlapping ngrams between evaluated and reference
+            overlap_count += self._count_overlap(summary_ngrams, model_ngrams)
 
         # Handle edge case.
         # This isn't mathematically correct, but it's good enough
-        if evaluated_count == 0:
-            precision = 0.0
-        else:
-            precision = overlapping_count / evaluated_count
+        precision = 0.0 if summary_count == 0 \
+            else overlap_count / summary_count
 
-        if reference_count == 0:
-            recall = 0.0
-        else:
-            recall = overlapping_count / reference_count
+        recall = 0.0 if model_count == 0 else overlap_count / model_count
 
         f1_score = 2.0 * ((precision * recall) / (precision + recall + 1e-8))
 
-        # return overlapping_count / reference_count
         return f1_score, precision, recall
 
     def _f_p_r_lcs(self, llcs, m, n):
@@ -288,71 +311,60 @@ class RougeScore(object):
                 evaluated_sentences, ref_s)
         return self._f_p_r_lcs(union_lcs_sum_across_all_references, m, n)
 
+    def _print_result(self, rouge_type, rouge_all, print_all=False):
+        rouge_f, rouge_p, rouge_r = map(np.mean, zip(*rouge_all))
+
+        print("ROUGE-%s Average  R:%0.5f  P:%0.5f  F:%0.5f"
+              % (rouge_type, rouge_r, rouge_p, rouge_f))
+
+        if print_all:
+            print("---------------------------------")
+            for i, rouge in enumerate(rouge_all):
+                rouge_f, rouge_p, rouge_r = rouge
+                print("ROUGE-%s Eval %d  R:%0.5f  P:%0.5f  F:%0.5f"
+                      % (rouge_type, i, rouge_r, rouge_p, rouge_f))
+            print("---------------------------------")
+
     def rouge(self, hyp_refs_pairs, print_all=False):
         """Calculates average rouge scores for a list of hypotheses and
         references"""
 
         rouge_1_all = []
         rouge_2_all = []
-        rouge_l_all = []
+        # rouge_l_all = []
 
         for hyp_refs_pair in hyp_refs_pairs:
-            hyp, refs = hyp_refs_pair
+            hyp_path, ref_paths = hyp_refs_pair
 
-            hyp = map(lambda x: x.decode('utf-8'), list(open(hyp)))
-            refs = map(
-                lambda h:
-                    map(lambda x: x.decode('utf-8'), list(open(h))),
-                refs
-            )
+            with open(hyp_path) as hyp_file:
+                hyp = map(lambda x: x.decode('utf-8'), list(hyp_file))
 
-            rouge_1 = [
-                self.rouge_n(hyp, ref, 1) for ref in refs
-            ]
-            rouge_1_all.append(map(np.mean, zip(*rouge_1)))
+            refs = []
+            for ref_path in ref_paths:
+                with open(ref_path) as ref_file:
+                    refs.append(map(lambda x: x.decode('utf-8'),
+                                    list(ref_file)))
 
-            rouge_2 = [
-                self.rouge_n(hyp, ref, 2) for ref in refs
-            ]
-            rouge_2_all.append(map(np.mean, zip(*rouge_2)))
+            rouge_1_all.append(self.rouge_n(hyp, refs, 1))
 
-            rouge_l = [
-                self.rouge_l_sentence_level(hyp, ref) for ref in refs
-            ]
-            rouge_l_all.append(map(np.mean, zip(*rouge_l)))
+            rouge_2_all.append(self.rouge_n(hyp, refs, 2))
 
-        rouge_f, rouge_p, rouge_r = map(np.mean, zip(*rouge_1_all))
-        print("ROUGE-1 Average  R:%0.5f  P:%0.5f  F:%0.5f"
-              % (rouge_f, rouge_p, rouge_r))
+            # rouge_l = [
+            #     self.rouge_l_sentence_level(hyp, ref) for ref in refs
+            # ]
+            # rouge_l_all.append(map(np.mean, zip(*rouge_l)))
 
-        if print_all:
-            print("---------------------------------")
-            for i, rouge in enumerate(rouge_1_all):
-                rouge_f, rouge_p, rouge_r = rouge
-                print("ROUGE-1 Eval %d  R:%0.5f  P:%0.5f  F:%0.5f"
-                      % (i, rouge_f, rouge_p, rouge_r))
-            print("---------------------------------")
+        self._print_result("1", rouge_1_all, print_all)
+        self._print_result("2", rouge_2_all, print_all)
 
-        rouge_f, rouge_p, rouge_r = map(np.mean, zip(*rouge_2_all))
-        print("ROUGE-2 Average  R:%0.5f  P:%0.5f  F:%0.5f"
-              % (rouge_f, rouge_p, rouge_r))
-
-        if print_all:
-            print("---------------------------------")
-            for i, rouge in enumerate(rouge_2_all):
-                rouge_f, rouge_p, rouge_r = rouge
-                print("ROUGE-1 Eval %d  R:%0.5f  P:%0.5f  F:%0.5f"
-                      % (i, rouge_f, rouge_p, rouge_r))
-            print("---------------------------------")
-
-        rouge_f, rouge_p, rouge_r = map(np.mean, zip(*rouge_l_all))
-        print("ROUGE-L Average  R:%0.5f  P:%0.5f  F:%0.5f"
-              % (rouge_f, rouge_p, rouge_r))
-
-        if print_all:
-            print("---------------------------------")
-            for i, rouge in enumerate(rouge_l_all):
-                rouge_f, rouge_p, rouge_r = rouge
-                print("ROUGE-1 Eval %d  R:%0.5f  P:%0.5f  F:%0.5f"
-                      % (i, rouge_f, rouge_p, rouge_r))
-            print("---------------------------------")
+        # rouge_f, rouge_p, rouge_r = map(np.mean, zip(*rouge_l_all))
+        # print("ROUGE-L Average  R:%0.5f  P:%0.5f  F:%0.5f"
+        #       % (rouge_r, rouge_p, rouge_f))
+        #
+        # if print_all:
+        #     print("---------------------------------")
+        #     for i, rouge in enumerate(rouge_l_all):
+        #         rouge_f, rouge_p, rouge_r = rouge
+        #         print("ROUGE-L Eval %d  R:%0.5f  P:%0.5f  F:%0.5f"
+        #               % (i, rouge_r, rouge_p, rouge_f))
+        #     print("---------------------------------")
