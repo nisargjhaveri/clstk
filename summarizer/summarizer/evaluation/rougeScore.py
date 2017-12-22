@@ -331,7 +331,6 @@ class RougeScore(object):
 
         rouge_1_all = []
         rouge_2_all = []
-        rouge_l_all = []
 
         for hyp_refs_pair in hyp_refs_pairs:
             hyp_path, ref_paths = hyp_refs_pair
@@ -349,11 +348,10 @@ class RougeScore(object):
 
             rouge_2_all.append(self.rouge_n(hyp, refs, 2))
 
-            rouge_l = [
-                self.rouge_l_sentence_level(hyp, ref) for ref in refs
-            ]
-            rouge_l_all.append(map(np.mean, zip(*rouge_l)))
+            # rouge_l = [
+            #     self.rouge_l_sentence_level(hyp, ref) for ref in refs
+            # ]
+            # rouge_l_all.append(map(np.mean, zip(*rouge_l)))
 
         self._print_result("1", rouge_1_all, print_all)
         self._print_result("2", rouge_2_all, print_all)
-        self._print_result("L", rouge_l_all, print_all)
