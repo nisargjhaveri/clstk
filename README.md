@@ -14,10 +14,11 @@ $ git clone https://github.com/nisargjhaveri/summarizer
 - nltk
 - requests
 - polyglot
+- regex
 
 Use your preferred method. You may use `pip` as followed.
 ```
-$ pip install nltk numpy scipy sklearn requests
+$ pip install nltk numpy scipy sklearn requests regex
 ```
 
 Also install nltk packages called `stopwords` and `punkt`.

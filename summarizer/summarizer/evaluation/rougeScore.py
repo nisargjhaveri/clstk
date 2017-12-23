@@ -11,7 +11,7 @@ import collections
 import six
 
 import numpy as np
-import re
+import regex
 
 
 class RougeScore(object):
@@ -20,16 +20,16 @@ class RougeScore(object):
         self._stemmer = stemmer if stemmer else self.dummy_stemmer
 
     def dummy_tokenizer(self, sentence):
-        sentence = re.sub(r'-', ' - ', sentence)
-        sentence = re.sub(r'[^A-Za-z0-9\-]', ' ', sentence)
-        sentence = re.sub(r'^\s+', '', sentence)
-        sentence = re.sub(r'\s+$', '', sentence)
-        sentence = re.sub(r'\s+', ' ', sentence)
+        sentence = regex.sub(r'-', ' - ', sentence)
+        sentence = regex.sub(r'[^\w]', ' ', sentence)
+        sentence = regex.sub(r'^\s+', '', sentence)
+        sentence = regex.sub(r'\s+$', '', sentence)
+        sentence = regex.sub(r'\s+', ' ', sentence)
         sentence = sentence.strip().lower()
 
-        r = re.compile(r'^[a-z0-9]')
+        r = regex.compile(r'^\w')
 
-        return filter(r.match, re.split(r'\s+', sentence))
+        return filter(r.match, regex.split(r'\s+', sentence))
         # return sentence.split()
 
     def dummy_stemmer(self, token):
