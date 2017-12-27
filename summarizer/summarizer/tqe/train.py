@@ -1,4 +1,3 @@
-import argparse
 import os
 import subprocess
 
@@ -11,7 +10,7 @@ from sklearn.model_selection import ShuffleSplit
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
 
-import kenlm
+# import kenlm
 
 import logging
 logger = logging.getLogger("root")
@@ -35,18 +34,18 @@ def _train_lm(sentences, lmFilePath, order):
     with open(lmFilePath, "wb") as lmFile:
         devNull = None if logger.isEnabledFor(logging.INFO) \
                                             else open(os.devnull, 'w')
-        kenlm = subprocess.Popen([kenlmExecutable, "-o", str(order)],
+        lmplz = subprocess.Popen([kenlmExecutable, "-o", str(order)],
                                  stdin=subprocess.PIPE,
                                  stdout=lmFile,
                                  stderr=devNull)
-        kenlm.communicate("\n".join(sentences).encode("utf-8"))
+        lmplz.communicate("\n".join(sentences).encode("utf-8"))
         devNull is None or devNull.close()
 
 
 def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
-    logger.info("Loading language models")
-    sourceModel = kenlm.Model(sourceLMPath)
-    targetModel = kenlm.Model(targetLMPath)
+    # logger.info("Loading language models")
+    # sourceModel = kenlm.Model(sourceLMPath)
+    # targetModel = kenlm.Model(targetLMPath)
 
     def _computeSentenceFeatures(sourceSentence, targetSentence):
         sourceTokens = sourceSentence.split()
@@ -56,16 +55,16 @@ def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
 
         return [
             len(sourceTokens),
-            len(targetTokens),
+            # len(targetTokens),
             np.mean(map(len, sourceTokens)),
             np.mean(map(len, targetTokens)),
-            float(len(sourceTokens)) / float(len(targetTokens)),
-            float(len(targetTokens)) / float(len(sourceTokens)),
+            # float(len(sourceTokens)) / float(len(targetTokens)),
+            # float(len(targetTokens)) / float(len(sourceTokens)),
             len(filter(punc.search, sourceTokens)),
-            len(filter(punc.search, targetTokens)),
+            # len(filter(punc.search, targetTokens)),
             float(len(set(targetTokens))) / float(len(targetTokens)),
-            sourceModel.score(sourceSentence),
-            targetModel.score(targetSentence),
+            # sourceModel.score(sourceSentence),
+            # targetModel.score(targetSentence),
         ]
 
     logger.info("Computing features")
@@ -76,7 +75,7 @@ def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
                 )
 
 
-def train_model(workspaceDir, modelName, evaluate=False):
+def train_model(workspaceDir, modelName, evaluate=False, trainLM=True):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
@@ -98,9 +97,10 @@ def train_model(workspaceDir, modelName, evaluate=False):
         splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
 
     for train_index, test_index in splitter.split(srcSentences):
-        logger.info("Training language models")
-        _train_lm(srcSentences[train_index], srcLMPath, 2)
-        _train_lm(refSentences[train_index], refLMPath, 2)
+        if trainLM:
+            logger.info("Training language models")
+            _train_lm(srcSentences[train_index], srcLMPath, 2)
+            _train_lm(refSentences[train_index], refLMPath, 2)
 
         y = np.loadtxt(targetPath)
         X = _getFeatures(srcSentences, mtSentences, srcLMPath, refLMPath)

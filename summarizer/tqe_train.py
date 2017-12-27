@@ -17,6 +17,8 @@ if __name__ == '__main__':
                         'preparation')
     parser.add_argument('--evaluate', action='store_true',
                         help='Also evaluate the trained model.')
+    parser.add_argument('--lm-exists', action='store_true',
+                        help='Don\'t train language model. It already exists.')
 
     args = parser.parse_args()
 
@@ -35,4 +37,5 @@ if __name__ == '__main__':
 
     train.train_model(args.workspace_dir,
                       args.model_name,
-                      args.evaluate)
+                      args.evaluate,
+                      trainLM=(not args.lm_exists))
