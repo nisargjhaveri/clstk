@@ -2,10 +2,9 @@
 
 # TODO: Don't use paths here directly
 TERCOM_JAR=~/Libraries/tercom-0.7.25/tercom.7.25.jar
-KENLM_BIN=~/Libraries/kenlm/build/bin
 
 function usage() {
-    echo "Usage: prepare_tqe.sh [-h] [--prepared] SRC_FILE MT_FILE REFS_FILE OUT_PREFIX OUT_SUFFIX" >&2
+    echo "Usage: prepare_tqe.sh [-h] [--prepared] SRC_FILE MT_FILE REFS_FILE OUT_DIR MODEL_NAME" >&2
     echo "The files have sentence id and tokens per line seperated by tab" >&2
     exit 1
 }
@@ -77,9 +76,5 @@ with open("$OUT_DIR/$OUT_FILE.mt") as hyp_file:
         for ref, hyp in zip([_.split() for _ in list(ref_file)], [_.split() for _ in list(hyp_file)]):
             print bleu_score.sentence_bleu([ref], hyp, smoothing_function=bleu_score.SmoothingFunction().method1)
 END
-
-echo "==> Generating Language Models <=="
-cat "$OUT_DIR/$OUT_FILE.src" | $KENLM_BIN/lmplz -o 2 > "$OUT_DIR/$OUT_FILE.src.lm.2.arpa" 2>/dev/null
-cat "$OUT_DIR/$OUT_FILE.ref" | $KENLM_BIN/lmplz -o 2 > "$OUT_DIR/$OUT_FILE.ref.lm.2.arpa" 2>/dev/null
 
 echo "==> Finalizing <=="

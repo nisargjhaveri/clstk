@@ -42,9 +42,14 @@ https://stanfordnlp.github.io/CoreNLP/index.html#download
 
 Get and setup Stanford CoreNLP and set an environment variable `CORENLP_JAR` with the path to `stanford-corenlp-*.jar` file
 
-## Setup tercom and KenLM (for TQE training preparation)
-http://www.cs.umd.edu/~snover/tercom/
+## Setuo KenLM (for TQE training)
 https://github.com/kpu/kenlm
+
+Setup KenLM and set an environment variable `KENLM_BIN` with the path to directory containing `lmplz` binary.
+
+## Setup tercom (for TQE training preparation)
+http://www.cs.umd.edu/~snover/tercom/
+
 
 ## Use
 Once the setup is done, you should be able to use it.

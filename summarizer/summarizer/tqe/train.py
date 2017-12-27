@@ -1,15 +1,20 @@
 import argparse
+import os
+import subprocess
 
 import regex
 
 import numpy as np
 from sklearn import svm
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import ShuffleSplit
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
 
 import kenlm
+
+import logging
+logger = logging.getLogger("root")
 
 
 def _loadSentences(filePath):
@@ -17,10 +22,29 @@ def _loadSentences(filePath):
         sentences = map(
             lambda s: s.decode('utf-8').strip(), list(lines))
 
-    return sentences
+    return np.array(sentences, dtype=object)
+
+
+def _train_lm(sentences, lmFilePath, order):
+    kenlmBin = os.getenv("KENLM_BIN", None)
+    if kenlmBin is None:
+        raise RuntimeError("Environment variable KENLM_BIN is not set")
+
+    kenlmExecutable = os.path.join(kenlmBin, "lmplz")
+
+    with open(lmFilePath, "wb") as lmFile:
+        devNull = None if logger.isEnabledFor(logging.INFO) \
+                                            else open(os.devnull, 'w')
+        kenlm = subprocess.Popen([kenlmExecutable, "-o", str(order)],
+                                 stdin=subprocess.PIPE,
+                                 stdout=lmFile,
+                                 stderr=devNull)
+        kenlm.communicate("\n".join(sentences).encode("utf-8"))
+        devNull is None or devNull.close()
 
 
 def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
+    logger.info("Loading language models")
     sourceModel = kenlm.Model(sourceLMPath)
     targetModel = kenlm.Model(targetLMPath)
 
@@ -44,6 +68,7 @@ def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
             targetModel.score(targetSentence),
         ]
 
+    logger.info("Computing features")
     return np.array(
                 map(_computeSentenceFeatures,
                     sourceSentences,
@@ -51,55 +76,52 @@ def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
                 )
 
 
-def _train_model(targetPath, sourceSentencesPath, targetSentencesPath,
-                 sourceLMPath, targetLMPath, evaluate=False):
-    srcSentences = _loadSentences(sourceSentencesPath)
-    mtSentences = _loadSentences(sourceSentencesPath)
+def train_model(workspaceDir, modelName, evaluate=False):
+    logger.info("initializing TQE training")
+    fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
-    y = np.loadtxt(targetPath)
-    X = _getFeatures(srcSentences, mtSentences, sourceLMPath, targetLMPath)
+    targetPath = fileBasename + ".hter"
+    srcSentencesPath = fileBasename + ".src"
+    mtSentencesPath = fileBasename + ".mt"
+    refSentencesPath = fileBasename + ".ref"
+
+    srcLMPath = fileBasename + ".src.lm.2.arpa"
+    refLMPath = fileBasename + ".ref.lm.2.arpa"
+
+    srcSentences = _loadSentences(srcSentencesPath)
+    mtSentences = _loadSentences(mtSentencesPath)
+    refSentences = _loadSentences(refSentencesPath)
 
     if evaluate:
-        X_train, X_test, y_train, y_test = train_test_split(
-                                        X, y, test_size=0.1, random_state=42)
+        splitter = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
     else:
-        X_train, y_train = X, y
+        splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
 
-    svr = svm.SVR(verbose=True)
-    svr.fit(X_train, y_train)
+    for train_index, test_index in splitter.split(srcSentences):
+        logger.info("Training language models")
+        _train_lm(srcSentences[train_index], srcLMPath, 2)
+        _train_lm(refSentences[train_index], refLMPath, 2)
 
-    if evaluate:
-        y_pred = svr.predict(X_test)
-        _evaluate(y_pred, y_test)
+        y = np.loadtxt(targetPath)
+        X = _getFeatures(srcSentences, mtSentences, srcLMPath, refLMPath)
+
+        X_train = X[train_index]
+        y_train = y[train_index]
+
+        logger.info("Training SVR")
+        svr = svm.SVR(verbose=True)
+        svr.fit(X_train, y_train)
+
+        if evaluate:
+            logger.info("Evaluating")
+            X_test = X[test_index]
+            y_test = y[test_index]
+
+            y_pred = svr.predict(X_test)
+            _evaluate(y_pred, y_test)
 
 
 def _evaluate(y_pred, y_test):
     print "MSE:", mean_squared_error(y_test, y_pred)
     print "MAE:", mean_absolute_error(y_test, y_pred)
     print "Pearson's r:", pearsonr(y_pred, y_test)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-            description='Train Translation Quality Estimation')
-    parser.add_argument('target_path',
-                        help='File containing target scores.')
-    parser.add_argument('source_sentences',
-                        help='File containing source sentences.')
-    parser.add_argument('target_sentences',
-                        help='File containing MT sentences.')
-    parser.add_argument('source_lm',
-                        help='Langauge model path for source language')
-    parser.add_argument('target_lm',
-                        help='Langauge model path for target language')
-    parser.add_argument('--evaluate', action='store_true',
-                        help='Also evaluate the trained model.')
-
-    args = parser.parse_args()
-
-    _train_model(args.target_path,
-                 args.source_sentences,
-                 args.target_sentences,
-                 args.source_lm,
-                 args.target_lm,
-                 args.evaluate)
