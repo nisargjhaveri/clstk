@@ -9,6 +9,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
 
+import kenlm
+
 
 def _loadSentences(filePath):
     with open(filePath) as lines:
@@ -18,26 +20,30 @@ def _loadSentences(filePath):
     return sentences
 
 
-def _computeSentenceFeatures(sourceSentence, targetSentence):
-    sourceTokens = sourceSentence.split()
-    targetTokens = targetSentence.split()
+def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
+    sourceModel = kenlm.Model(sourceLMPath)
+    targetModel = kenlm.Model(targetLMPath)
 
-    punc = regex.compile(r'[^\w]', regex.UNICODE)
+    def _computeSentenceFeatures(sourceSentence, targetSentence):
+        sourceTokens = sourceSentence.split()
+        targetTokens = targetSentence.split()
 
-    return [
-        len(sourceTokens),
-        len(targetTokens),
-        np.mean(map(len, sourceTokens)),
-        np.mean(map(len, targetTokens)),
-        float(len(sourceTokens)) / float(len(targetTokens)),
-        float(len(targetTokens)) / float(len(sourceTokens)),
-        len(filter(punc.search, sourceTokens)),
-        len(filter(punc.search, targetTokens)),
-        float(len(set(targetTokens))) / float(len(targetTokens)),
-    ]
+        punc = regex.compile(r'[^\w]', regex.UNICODE)
 
+        return [
+            len(sourceTokens),
+            len(targetTokens),
+            np.mean(map(len, sourceTokens)),
+            np.mean(map(len, targetTokens)),
+            float(len(sourceTokens)) / float(len(targetTokens)),
+            float(len(targetTokens)) / float(len(sourceTokens)),
+            len(filter(punc.search, sourceTokens)),
+            len(filter(punc.search, targetTokens)),
+            float(len(set(targetTokens))) / float(len(targetTokens)),
+            sourceModel.score(sourceSentence),
+            targetModel.score(targetSentence),
+        ]
 
-def _getFeatures(sourceSentences, targetSentences):
     return np.array(
                 map(_computeSentenceFeatures,
                     sourceSentences,
@@ -46,12 +52,12 @@ def _getFeatures(sourceSentences, targetSentences):
 
 
 def _train_model(targetPath, sourceSentencesPath, targetSentencesPath,
-                 evaluate=False):
+                 sourceLMPath, targetLMPath, evaluate=False):
     srcSentences = _loadSentences(sourceSentencesPath)
     mtSentences = _loadSentences(sourceSentencesPath)
 
     y = np.loadtxt(targetPath)
-    X = _getFeatures(srcSentences, mtSentences)
+    X = _getFeatures(srcSentences, mtSentences, sourceLMPath, targetLMPath)
 
     if evaluate:
         X_train, X_test, y_train, y_test = train_test_split(
@@ -82,6 +88,10 @@ if __name__ == '__main__':
                         help='File containing source sentences.')
     parser.add_argument('target_sentences',
                         help='File containing MT sentences.')
+    parser.add_argument('source_lm',
+                        help='Langauge model path for source language')
+    parser.add_argument('target_lm',
+                        help='Langauge model path for target language')
     parser.add_argument('--evaluate', action='store_true',
                         help='Also evaluate the trained model.')
 
@@ -90,4 +100,6 @@ if __name__ == '__main__':
     _train_model(args.target_path,
                  args.source_sentences,
                  args.target_sentences,
+                 args.source_lm,
+                 args.target_lm,
                  args.evaluate)

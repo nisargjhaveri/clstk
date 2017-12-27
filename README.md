@@ -8,17 +8,19 @@ $ git clone https://github.com/nisargjhaveri/summarizer
 ```
 
 ### Python dependencies
+- nltk
 - numpy
 - scipy
 - sklearn
-- nltk
 - requests
 - polyglot
 - regex
+- kenlm
 
 Use your preferred method. You may use `pip` as followed.
 ```
-$ pip install nltk numpy scipy sklearn requests regex
+$ pip install nltk numpy scipy sklearn requests polyglot regex
+$ pip install https://github.com/kpu/kenlm/archive/master.zip
 ```
 
 Also install nltk packages called `stopwords` and `punkt`.
@@ -39,6 +41,10 @@ Set an environment variable `ROUGE_HOME` with the path to ROUGE root directory, 
 https://stanfordnlp.github.io/CoreNLP/index.html#download
 
 Get and setup Stanford CoreNLP and set an environment variable `CORENLP_JAR` with the path to `stanford-corenlp-*.jar` file
+
+## Setup tercom and KenLM (for TQE training preparation)
+http://www.cs.umd.edu/~snover/tercom/
+https://github.com/kpu/kenlm
 
 ## Use
 Once the setup is done, you should be able to use it.
