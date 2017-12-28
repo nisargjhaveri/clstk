@@ -1,11 +1,15 @@
 import os
 import subprocess
 
-import regex
+# import regex
 
 import numpy as np
 from sklearn import svm
 from sklearn.model_selection import ShuffleSplit
+
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+from matplotlib import cm
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
@@ -51,7 +55,7 @@ def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
         sourceTokens = sourceSentence.split()
         targetTokens = targetSentence.split()
 
-        punc = regex.compile(r'[^\w]', regex.UNICODE)
+        # punc = regex.compile(r'[^\w]', regex.UNICODE)
 
         return [
             len(sourceTokens),
@@ -60,7 +64,7 @@ def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
             np.mean(map(len, targetTokens)),
             # float(len(sourceTokens)) / float(len(targetTokens)),
             # float(len(targetTokens)) / float(len(sourceTokens)),
-            len(filter(punc.search, sourceTokens)),
+            # len(filter(punc.search, sourceTokens)),
             # len(filter(punc.search, targetTokens)),
             float(len(set(targetTokens))) / float(len(targetTokens)),
             # sourceModel.score(sourceSentence),
@@ -73,6 +77,27 @@ def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
                     sourceSentences,
                     targetSentences)
                 )
+
+
+def plotData(X, y, svr):
+    pca = PCA(n_components=2)
+    pcaX = pca.fit_transform(X)
+
+    # X_plot = np.linspace(0, 5, 100000)[:, None]
+    # y_svr = svr.predict(X_plot)
+
+    # sv_ind = svr.support_
+    # plt.scatter(pcaX[sv_ind], y[sv_ind], c='r', label='SVR support vectors',
+    #             zorder=2)
+    plt.scatter(pcaX[:, 0], pcaX[:, 1], c=y, cmap=cm.Oranges, label='data')
+    # plt.plot(X_plot, y_svr, c='r',  label='SVR')
+
+    # plt.xlabel('data')
+    # plt.ylabel('target')
+    # plt.title('')
+    plt.legend()
+
+    plt.show()
 
 
 def train_model(workspaceDir, modelName, evaluate=False, trainLM=True):
@@ -102,7 +127,7 @@ def train_model(workspaceDir, modelName, evaluate=False, trainLM=True):
             _train_lm(srcSentences[train_index], srcLMPath, 2)
             _train_lm(refSentences[train_index], refLMPath, 2)
 
-        y = np.loadtxt(targetPath)
+        y = np.clip(np.loadtxt(targetPath), 0, 1)
         X = _getFeatures(srcSentences, mtSentences, srcLMPath, refLMPath)
 
         X_train = X[train_index]
@@ -111,6 +136,8 @@ def train_model(workspaceDir, modelName, evaluate=False, trainLM=True):
         logger.info("Training SVR")
         svr = svm.SVR(verbose=True)
         svr.fit(X_train, y_train)
+
+        # plotData(X_train, y_train, svr)
 
         if evaluate:
             logger.info("Evaluating")
