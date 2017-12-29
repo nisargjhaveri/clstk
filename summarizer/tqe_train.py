@@ -19,6 +19,8 @@ if __name__ == '__main__':
                         help='Also evaluate the trained model.')
     parser.add_argument('--lm-exists', action='store_true',
                         help='Don\'t train language model. It already exists.')
+    parser.add_argument('--ngrams-exists', action='store_true',
+                        help='Don\'t compute ngram freqs. It already exists.')
 
     args = parser.parse_args()
 
@@ -38,4 +40,5 @@ if __name__ == '__main__':
     train.train_model(args.workspace_dir,
                       args.model_name,
                       args.evaluate,
-                      trainLM=(not args.lm_exists))
+                      trainLM=(not args.lm_exists),
+                      trainNGrams=(not args.ngrams_exists))

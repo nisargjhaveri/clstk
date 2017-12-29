@@ -1,6 +1,7 @@
 import os
 import subprocess
-
+import collections
+import cPickle
 # import regex
 
 import numpy as np
@@ -28,7 +29,14 @@ def _loadSentences(filePath):
     return np.array(sentences, dtype=object)
 
 
-def _train_lm(sentences, lmFilePath, order):
+def _normalizeSentences(sentences):
+    def _normalizeSentence(sentence):
+        return sentence.lower()
+
+    return map(_normalizeSentence, sentences)
+
+
+def _trainLM(sentences, lmFilePath, order):
     kenlmBin = os.getenv("KENLM_BIN", None)
     if kenlmBin is None:
         raise RuntimeError("Environment variable KENLM_BIN is not set")
@@ -42,40 +50,120 @@ def _train_lm(sentences, lmFilePath, order):
                                  stdin=subprocess.PIPE,
                                  stdout=lmFile,
                                  stderr=devNull)
-        lmplz.communicate("\n".join(sentences).encode("utf-8"))
+        lmplz.communicate("\n".join(_normalizeSentences(sentences))
+                          .encode("utf-8"))
         devNull is None or devNull.close()
 
 
-def _getFeatures(sourceSentences, targetSentences, sourceLMPath, targetLMPath):
-    # logger.info("Loading language models")
-    # sourceModel = kenlm.Model(sourceLMPath)
-    # targetModel = kenlm.Model(targetLMPath)
+def _getNGrams(sentence, n):
+    tokens = sentence.split()
+    count = len(tokens)
 
-    def _computeSentenceFeatures(sourceSentence, targetSentence):
-        sourceTokens = sourceSentence.split()
-        targetTokens = targetSentence.split()
+    return zip(*[tokens[i:count - n + i] for i in xrange(n)])
+
+
+def _loadNGramCounts(sentences, ngramPath, trainNGrams=True):
+    sentences = _normalizeSentences(sentences)
+
+    ngrams1counter, ngrams2counter, ngrams3counter = None, None, None
+
+    if (trainNGrams):
+        logger.info("Computing ngram frequencies")
+        ngrams1 = sum([_getNGrams(s, 1) for s in sentences], [])
+        ngrams1counter = collections.Counter(ngrams1)
+
+        ngrams2 = sum([_getNGrams(s, 2) for s in sentences], [])
+        ngrams2counter = collections.Counter(ngrams2)
+
+        ngrams3 = sum([_getNGrams(s, 3) for s in sentences], [])
+        ngrams3counter = collections.Counter(ngrams3)
+
+        ngramCounts = (ngrams1counter, ngrams2counter, ngrams3counter)
+
+        with open(ngramPath, "wb") as ngramsFile:
+            cPickle.dump(ngramCounts, ngramsFile, cPickle.HIGHEST_PROTOCOL)
+    else:
+        logger.info("Loading ngram frequencies")
+        with open(ngramPath) as ngramsFile:
+            ngramCounts = cPickle.load(ngramsFile)
+
+    return ngramCounts
+
+
+def _getHighLowFreqNGrams(counter):
+    ngrams = map(lambda x: x[0], counter.most_common())
+    totalCount = len(ngrams)
+    highFreqNGrams = ngrams[:(totalCount / 4)]
+    lowFreqNGrams = ngrams[(3 * totalCount / 4):]
+
+    return set(highFreqNGrams), set(lowFreqNGrams)
+
+
+def _getOverlapCount(sentence, ngrams, n):
+    sentenceNGrams = _getNGrams(sentence, n)
+
+    count = 0
+    for ngram in sentenceNGrams:
+        if ngram in ngrams:
+            count += 1
+
+    return count
+
+
+def _getFeatures(srcSentences, mtSentences, refSentences, train_index,
+                 fileBasename, trainLM=True, trainNGrams=True):
+    srcLMPath = fileBasename + ".src.lm.2.arpa"
+    refLMPath = fileBasename + ".ref.lm.2.arpa"
+    ngramPath = fileBasename + ".src.ngrams.pickle"
+
+    if trainLM:
+        logger.info("Training language models")
+        _trainLM(srcSentences[train_index], srcLMPath, 2)
+        _trainLM(refSentences[train_index], refLMPath, 2)
+
+    # logger.info("Loading language models")
+    # srcModel = kenlm.Model(srcLMPath)
+    # refModel = kenlm.Model(refLMPath)
+
+    ngramCounts = _loadNGramCounts(srcSentences[train_index], ngramPath,
+                                   trainNGrams)
+    high1grams, low1grams = _getHighLowFreqNGrams(ngramCounts[0])
+    high2grams, low2grams = _getHighLowFreqNGrams(ngramCounts[1])
+    high3grams, low3grams = _getHighLowFreqNGrams(ngramCounts[2])
+
+    def _computeSentenceFeatures(srcSentence, mtSentence):
+        srcTokens = srcSentence.split()
+        mtTokens = mtSentence.split()
+
+        srcCount = float(len(srcTokens))
 
         # punc = regex.compile(r'[^\w]', regex.UNICODE)
 
         return [
-            len(sourceTokens),
-            # len(targetTokens),
-            np.mean(map(len, sourceTokens)),
-            np.mean(map(len, targetTokens)),
-            # float(len(sourceTokens)) / float(len(targetTokens)),
-            # float(len(targetTokens)) / float(len(sourceTokens)),
-            # len(filter(punc.search, sourceTokens)),
-            # len(filter(punc.search, targetTokens)),
-            float(len(set(targetTokens))) / float(len(targetTokens)),
-            # sourceModel.score(sourceSentence),
-            # targetModel.score(targetSentence),
+            len(srcTokens),
+            # len(mtTokens),
+            np.mean(map(len, srcTokens)),
+            np.mean(map(len, mtTokens)),
+            # float(len(srcTokens)) / float(len(mtTokens)),
+            # float(len(mtTokens)) / float(len(srcTokens)),
+            # len(filter(punc.search, srcTokens)),
+            # len(filter(punc.search, mtTokens)),
+            float(len(set(mtTokens))) / float(len(mtTokens)),
+            # srcModel.score(srcSentence),
+            # refModel.score(mtSentence),
+            _getOverlapCount(srcSentence, high1grams, 1) / srcCount,
+            # _getOverlapCount(srcSentence, low1grams, 1) / srcCount,
+            # _getOverlapCount(srcSentence, high2grams, 2) / srcCount,
+            # _getOverlapCount(srcSentence, low2grams, 2) / srcCount,
+            # _getOverlapCount(srcSentence, high3grams, 3) / srcCount,
+            # _getOverlapCount(srcSentence, low3grams, 3) / srcCount,
         ]
 
     logger.info("Computing features")
     return np.array(
                 map(_computeSentenceFeatures,
-                    sourceSentences,
-                    targetSentences)
+                    srcSentences,
+                    mtSentences)
                 )
 
 
@@ -100,7 +188,8 @@ def plotData(X, y, svr):
     plt.show()
 
 
-def train_model(workspaceDir, modelName, evaluate=False, trainLM=True):
+def train_model(workspaceDir, modelName, evaluate=False,
+                trainLM=True, trainNGrams=True):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
@@ -108,9 +197,6 @@ def train_model(workspaceDir, modelName, evaluate=False, trainLM=True):
     srcSentencesPath = fileBasename + ".src"
     mtSentencesPath = fileBasename + ".mt"
     refSentencesPath = fileBasename + ".ref"
-
-    srcLMPath = fileBasename + ".src.lm.2.arpa"
-    refLMPath = fileBasename + ".ref.lm.2.arpa"
 
     srcSentences = _loadSentences(srcSentencesPath)
     mtSentences = _loadSentences(mtSentencesPath)
@@ -122,13 +208,10 @@ def train_model(workspaceDir, modelName, evaluate=False, trainLM=True):
         splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
 
     for train_index, test_index in splitter.split(srcSentences):
-        if trainLM:
-            logger.info("Training language models")
-            _train_lm(srcSentences[train_index], srcLMPath, 2)
-            _train_lm(refSentences[train_index], refLMPath, 2)
-
         y = np.clip(np.loadtxt(targetPath), 0, 1)
-        X = _getFeatures(srcSentences, mtSentences, srcLMPath, refLMPath)
+        X = _getFeatures(srcSentences, mtSentences, refSentences, train_index,
+                         fileBasename, trainLM=trainLM,
+                         trainNGrams=trainNGrams)
 
         X_train = X[train_index]
         y_train = y[train_index]
