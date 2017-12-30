@@ -136,12 +136,12 @@ def _getParseTrees(srcSentences, parsePath, parseSentences):
 
 
 def _getFeatures(srcSentences, mtSentences, refSentences, train_index,
-                 fileBasename, trainLM=True, trainNGrams=True,
-                 parseSentences=True):
+                 fileBasename, parseFileSuffix,
+                 trainLM=True, trainNGrams=True, parseSentences=True):
     srcLMPath = fileBasename + ".src.lm.2.arpa"
     refLMPath = fileBasename + ".ref.lm.2.arpa"
     ngramPath = fileBasename + ".src.ngrams.pickle"
-    parsePath = fileBasename + ".src.parse"
+    parsePath = fileBasename + ".src" + parseFileSuffix + ".parse"
 
     if trainLM:
         logger.info("Training language models")
@@ -162,7 +162,8 @@ def _getFeatures(srcSentences, mtSentences, refSentences, train_index,
 
     posCounts = CountVectorizer(
         lowercase=False,
-        tokenizer=lambda t: map(lambda p: p[1], t.pos())
+        tokenizer=lambda t: map(lambda p: p[1], t.pos()),
+        ngram_range=(1, 2)
     )
     posCounts.fit(srcParses)
 
@@ -236,7 +237,8 @@ def plotData(X, y, svr):
     plt.show()
 
 
-def train_model(workspaceDir, modelName, evaluate=False,
+def train_model(workspaceDir, modelName, evaluate=False, evalFileSuffix=None,
+                featureFileSuffix=None,
                 trainLM=True, trainNGrams=True, parseSentences=True):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
@@ -250,17 +252,21 @@ def train_model(workspaceDir, modelName, evaluate=False,
     mtSentences = _loadSentences(mtSentencesPath)
     refSentences = _loadSentences(refSentencesPath)
 
-    if evaluate:
+    if evaluate and not evalFileSuffix:
+        logger.info("Creating train test split")
         splitter = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
     else:
         splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
 
     for train_index, test_index in splitter.split(srcSentences):
         y = np.clip(np.loadtxt(targetPath), 0, 1)
-        X = _getFeatures(srcSentences, mtSentences, refSentences, train_index,
-                         fileBasename, trainLM=trainLM,
-                         trainNGrams=trainNGrams,
-                         parseSentences=parseSentences)
+        X = np.loadtxt(fileBasename + featureFileSuffix) \
+            if featureFileSuffix \
+            else _getFeatures(srcSentences, mtSentences, refSentences,
+                              train_index,
+                              fileBasename, "",
+                              trainLM=trainLM, trainNGrams=trainNGrams,
+                              parseSentences=parseSentences)
 
         X_train = X[train_index]
         y_train = y[train_index]
@@ -273,8 +279,21 @@ def train_model(workspaceDir, modelName, evaluate=False,
 
         if evaluate:
             logger.info("Evaluating")
-            X_test = X[test_index]
-            y_test = y[test_index]
+            if evalFileSuffix:
+                X_test = np.loadtxt(fileBasename + featureFileSuffix +
+                                    evalFileSuffix) \
+                    if featureFileSuffix \
+                    else _getFeatures(
+                            _loadSentences(srcSentencesPath + evalFileSuffix),
+                            _loadSentences(mtSentencesPath + evalFileSuffix),
+                            None, [], fileBasename, evalFileSuffix,
+                            trainLM=False, trainNGrams=False,
+                            parseSentences=parseSentences
+                            )
+                y_test = np.clip(np.loadtxt(targetPath + evalFileSuffix), 0, 1)
+            else:
+                X_test = X[test_index]
+                y_test = y[test_index]
 
             y_pred = svr.predict(X_test)
             _evaluate(y_pred, y_test)

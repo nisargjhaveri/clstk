@@ -17,6 +17,10 @@ if __name__ == '__main__':
                         'preparation')
     parser.add_argument('--evaluate', action='store_true',
                         help='Also evaluate the trained model.')
+    parser.add_argument('--eval-file-suffix', type=str, default=None,
+                        help='Suffix for test files')
+    parser.add_argument('--feature-file-suffix', type=str, default=None,
+                        help='Suffix for feature files')
     parser.add_argument('--lm-exists', action='store_true',
                         help='Don\'t train language model. It already exists.')
     parser.add_argument('--ngrams-exists', action='store_true',
@@ -42,7 +46,9 @@ if __name__ == '__main__':
 
     train.train_model(args.workspace_dir,
                       args.model_name,
-                      args.evaluate,
+                      evaluate=args.evaluate,
+                      evalFileSuffix=args.eval_file_suffix,
+                      featureFileSuffix=args.feature_file_suffix,
                       trainLM=(not args.lm_exists),
                       trainNGrams=(not args.ngrams_exists),
                       parseSentences=(not args.parse_exists))
