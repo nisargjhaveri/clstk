@@ -23,6 +23,8 @@ from multiprocessing.dummy import Pool
 
 import kenlm
 
+from ..utils.progress import ProgressBar
+
 import logging
 logger = logging.getLogger("root")
 
@@ -61,37 +63,49 @@ def _trainLM(sentences, lmFilePath, order):
         devNull is None or devNull.close()
 
 
-def _getNGrams(sentence, n):
+def _getNGrams(sentence, nList):
     tokens = sentence.split()
     count = len(tokens)
 
-    return zip(*[tokens[i:count - n + i] for i in xrange(n)])
+    ngramsList = []
+
+    for n in nList:
+        ngramsList.append(zip(*[tokens[i:count - n + i] for i in xrange(n)]))
+
+    return ngramsList
 
 
-def _loadNGramCounts(sentences, ngramPath, trainNGrams=True):
+def _fitNGramCounts(sentences, ngramPath):
     sentences = _normalizeSentences(sentences)
+    totalCount = len(sentences)
 
-    ngrams1counter, ngrams2counter, ngrams3counter = None, None, None
+    n1s = []
+    n2s = []
+    n3s = []
 
-    if (trainNGrams):
-        logger.info("Computing ngram frequencies")
-        ngrams1 = sum([_getNGrams(s, 1) for s in sentences], [])
-        ngrams1counter = collections.Counter(ngrams1)
+    progress = ProgressBar(totalCount)
+    for i, sentence in enumerate(sentences):
+        progress.done(i)
 
-        ngrams2 = sum([_getNGrams(s, 2) for s in sentences], [])
-        ngrams2counter = collections.Counter(ngrams2)
+        n1, n2, n3 = _getNGrams(sentence, [1, 2, 3])
+        n1s.extend(n1)
+        n2s.extend(n2)
+        n2s.extend(n3)
+    progress.complete()
 
-        ngrams3 = sum([_getNGrams(s, 3) for s in sentences], [])
-        ngrams3counter = collections.Counter(ngrams3)
+    n1counter = collections.Counter(n1s)
+    n2counter = collections.Counter(n2s)
+    n3counter = collections.Counter(n3s)
 
-        ngramCounts = (ngrams1counter, ngrams2counter, ngrams3counter)
+    ngramCounts = (n1counter, n2counter, n3counter)
 
-        with open(ngramPath, "wb") as ngramsFile:
-            cPickle.dump(ngramCounts, ngramsFile, cPickle.HIGHEST_PROTOCOL)
-    else:
-        logger.info("Loading ngram frequencies")
-        with open(ngramPath) as ngramsFile:
-            ngramCounts = cPickle.load(ngramsFile)
+    with open(ngramPath, "wb") as ngramsFile:
+        cPickle.dump(ngramCounts, ngramsFile, cPickle.HIGHEST_PROTOCOL)
+
+
+def _loadNGramCounts(ngramPath):
+    with open(ngramPath) as ngramsFile:
+        ngramCounts = cPickle.load(ngramsFile)
 
     return ngramCounts
 
@@ -106,7 +120,7 @@ def _getHighLowFreqNGrams(counter):
 
 
 def _getOverlapCount(sentence, ngrams, n):
-    sentenceNGrams = _getNGrams(sentence, n)
+    sentenceNGrams = _getNGrams(sentence, [n])[0]
 
     count = 0
     for ngram in sentenceNGrams:
@@ -116,56 +130,40 @@ def _getOverlapCount(sentence, ngrams, n):
     return count
 
 
-def _getParseTrees(srcSentences, parsePath, parseSentences):
-    if parseSentences:
-        logger.info("Parsing sentences")
-        p = Pool(10)
+def _parseSentences(sentences, parsedFilePath):
+    p = Pool(10)
 
-        parser = CoreNLPParser(
-                    url=os.getenv("CORENLP_HOST", "http://localhost:9000"))
-        parses = p.map(lambda s: parser.parse_one(s.split()), srcSentences)
+    parser = CoreNLPParser(
+                url=os.getenv("CORENLP_HOST", "http://localhost:9000"))
 
-        with open(parsePath, "wb") as ngramsFile:
-            cPickle.dump(parses, ngramsFile, cPickle.HIGHEST_PROTOCOL)
-    else:
-        logger.info("Loading parse trees")
-        with open(parsePath) as ngramsFile:
-            parses = cPickle.load(ngramsFile)
+    parseIterator = p.imap(lambda s: parser.parse_one(s.split()), sentences)
+    parses = []
+
+    progress = ProgressBar(len(sentences))
+    for i, parse in enumerate(parseIterator):
+        progress.done(i)
+        parses.append(parse)
+    progress.complete()
+
+    with open(parsedFilePath, "wb") as ngramsFile:
+        cPickle.dump(parses, ngramsFile, cPickle.HIGHEST_PROTOCOL)
+
+
+def _loadParsedSentences(parsedFilePath):
+    with open(parsedFilePath) as ngramsFile:
+        parses = cPickle.load(ngramsFile)
 
     return parses
 
 
-def _getFeatures(srcSentences, mtSentences, refSentences, train_index,
-                 fileBasename, parseFileSuffix,
-                 trainLM=True, trainNGrams=True, parseSentences=True):
-    srcLMPath = fileBasename + ".src.lm.2.arpa"
-    refLMPath = fileBasename + ".ref.lm.2.arpa"
-    ngramPath = fileBasename + ".src.ngrams.pickle"
-    parsePath = fileBasename + ".src" + parseFileSuffix + ".parse"
+def _getFeatures(srcSentences, mtSentences,
+                 srcLModel, refLModel, highLowNGrams, parsePath):
+    high1grams, low1grams, \
+        high2grams, low2grams, \
+        high3grams, low3grams = highLowNGrams
 
-    if trainLM:
-        logger.info("Training language models")
-        _trainLM(srcSentences[train_index], srcLMPath, 2)
-        _trainLM(refSentences[train_index], refLMPath, 2)
-
-    logger.info("Loading language models")
-    srcModel = kenlm.Model(srcLMPath)
-    refModel = kenlm.Model(refLMPath)
-
-    ngramCounts = _loadNGramCounts(srcSentences[train_index], ngramPath,
-                                   trainNGrams)
-    high1grams, low1grams = _getHighLowFreqNGrams(ngramCounts[0])
-    high2grams, low2grams = _getHighLowFreqNGrams(ngramCounts[1])
-    high3grams, low3grams = _getHighLowFreqNGrams(ngramCounts[2])
-
-    srcParses = _getParseTrees(srcSentences, parsePath, parseSentences)
-
-    posCounts = CountVectorizer(
-        lowercase=False,
-        tokenizer=lambda t: map(lambda p: p[1], t.pos()),
-        ngram_range=(1, 2)
-    )
-    posCounts.fit(srcParses)
+    logger.info("Loading parse trees")
+    srcParses = _loadParsedSentences(parsePath)
 
     punc = regex.compile(r'[^\w]', regex.UNICODE)
 
@@ -185,8 +183,8 @@ def _getFeatures(srcSentences, mtSentences, refSentences, train_index,
             len(filter(punc.search, srcTokens)),
             len(filter(punc.search, mtTokens)),
             float(len(set(mtTokens))) / float(len(mtTokens)),
-            srcModel.score(srcSentence),
-            refModel.score(mtSentence),
+            srcLModel.score(srcSentence),
+            refLModel.score(mtSentence),
             _getOverlapCount(srcSentence, high1grams, 1) / srcCount,
             _getOverlapCount(srcSentence, low1grams, 1) / srcCount,
             _getOverlapCount(srcSentence, high2grams, 2) / srcCount,
@@ -196,24 +194,17 @@ def _getFeatures(srcSentences, mtSentences, refSentences, train_index,
             srcParse.height(),
         ]
 
-        features.extend(posCounts.transform([srcParse]).todense().tolist()[0])
+        # features.extend(posCounts.transform([srcParse]).todense().tolist()[0])
 
         return features
 
     logger.info("Computing features")
-    X = np.array(
+    return np.array(
                 map(_computeSentenceFeatures,
                     srcSentences,
                     mtSentences,
                     srcParses)
                 )
-
-    X = preprocessing.normalize(X)
-
-    pca = PCA(n_components=15)
-    X = pca.fit_transform(X)
-
-    return X
 
 
 def plotData(X, y, svr):
@@ -237,7 +228,7 @@ def plotData(X, y, svr):
     plt.show()
 
 
-def train_model(workspaceDir, modelName, evaluate=False, evalFileSuffix=None,
+def train_model(workspaceDir, modelName, devFileSuffix=None,
                 featureFileSuffix=None,
                 trainLM=True, trainNGrams=True, parseSentences=True):
     logger.info("initializing TQE training")
@@ -248,55 +239,98 @@ def train_model(workspaceDir, modelName, evaluate=False, evalFileSuffix=None,
     mtSentencesPath = fileBasename + ".mt"
     refSentencesPath = fileBasename + ".ref"
 
+    srcLMPath = fileBasename + ".src.lm.2.arpa"
+    refLMPath = fileBasename + ".ref.lm.2.arpa"
+    ngramPath = fileBasename + ".src.ngrams.pickle"
+    srcParsePath = fileBasename + ".src.parse"
+    devParsePath = fileBasename + ".src.dev.parse"
+
     srcSentences = _loadSentences(srcSentencesPath)
     mtSentences = _loadSentences(mtSentencesPath)
     refSentences = _loadSentences(refSentencesPath)
 
-    if evaluate and not evalFileSuffix:
-        logger.info("Creating train test split")
-        splitter = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
-    else:
+    y = np.clip(np.loadtxt(targetPath), 0, 1)
+
+    if devFileSuffix:
         splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
+        train_index, _ = splitter.split(srcSentences).next()
 
-    for train_index, test_index in splitter.split(srcSentences):
-        y = np.clip(np.loadtxt(targetPath), 0, 1)
-        X = np.loadtxt(fileBasename + featureFileSuffix) \
-            if featureFileSuffix \
-            else _getFeatures(srcSentences, mtSentences, refSentences,
-                              train_index,
-                              fileBasename, "",
-                              trainLM=trainLM, trainNGrams=trainNGrams,
-                              parseSentences=parseSentences)
+        srcSentencesDev = _loadSentences(srcSentencesPath + devFileSuffix)
+        mtSentencesDev = _loadSentences(mtSentencesPath + devFileSuffix)
 
-        X_train = X[train_index]
-        y_train = y[train_index]
+        y_dev = np.clip(np.loadtxt(targetPath + devFileSuffix), 0, 1)
+    else:
+        splitter = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
+        train_index, dev_index = splitter.split(srcSentences).next()
 
-        logger.info("Training SVR")
-        svr = svm.SVR(verbose=True)
-        svr.fit(X_train, y_train)
+        srcSentencesDev = srcSentences[dev_index]
+        mtSentencesDev = mtSentences[dev_index]
 
-        # plotData(X_train, y_train, svr)
+        y_dev = y[dev_index]
 
-        if evaluate:
-            logger.info("Evaluating")
-            if evalFileSuffix:
-                X_test = np.loadtxt(fileBasename + featureFileSuffix +
-                                    evalFileSuffix) \
-                    if featureFileSuffix \
-                    else _getFeatures(
-                            _loadSentences(srcSentencesPath + evalFileSuffix),
-                            _loadSentences(mtSentencesPath + evalFileSuffix),
-                            None, [], fileBasename, evalFileSuffix,
-                            trainLM=False, trainNGrams=False,
-                            parseSentences=parseSentences
-                            )
-                y_test = np.clip(np.loadtxt(targetPath + evalFileSuffix), 0, 1)
-            else:
-                X_test = X[test_index]
-                y_test = y[test_index]
+    srcSentencesTrain = srcSentences[train_index]
+    mtSentencesTrain = mtSentences[train_index]
+    refSentencesTrain = refSentences[train_index]
 
-            y_pred = svr.predict(X_test)
-            _evaluate(y_pred, y_test)
+    y_train = y[train_index]
+
+    if trainLM:
+        logger.info("Training language models")
+        _trainLM(srcSentencesTrain, srcLMPath, 2)
+        _trainLM(refSentencesTrain, refLMPath, 2)
+
+    if trainNGrams:
+        logger.info("Computing ngram frequencies")
+        _fitNGramCounts(srcSentencesTrain, ngramPath)
+
+    if parseSentences:
+        logger.info("Parsing sentences")
+        _parseSentences(srcSentencesTrain, srcParsePath)
+        _parseSentences(srcSentencesDev, devParsePath)
+
+    # posCounts = CountVectorizer(
+    #     lowercase=False,
+    #     tokenizer=lambda t: map(lambda p: p[1], t.pos()),
+    #     ngram_range=(1, 2)
+    # )
+    # posCounts.fit(srcParses)
+
+    logger.info("Loading language models")
+    srcLModel = kenlm.Model(srcLMPath)
+    refLModel = kenlm.Model(refLMPath)
+
+    logger.info("Loading ngram frequencies")
+    ngramCounts = _loadNGramCounts(ngramPath)
+    high1grams, low1grams = _getHighLowFreqNGrams(ngramCounts[0])
+    high2grams, low2grams = _getHighLowFreqNGrams(ngramCounts[1])
+    high3grams, low3grams = _getHighLowFreqNGrams(ngramCounts[2])
+    highLowNGrams = (high1grams, low1grams,
+                     high2grams, low2grams,
+                     high3grams, low3grams)
+
+    X_train = np.loadtxt(fileBasename + featureFileSuffix) \
+        if featureFileSuffix \
+        else _getFeatures(srcSentencesTrain, mtSentencesTrain,
+                          srcLModel, refLModel, highLowNGrams, srcParsePath)
+
+    X_dev = np.loadtxt(fileBasename + featureFileSuffix + devFileSuffix) \
+        if featureFileSuffix \
+        else _getFeatures(srcSentencesDev, mtSentencesDev,
+                          srcLModel, refLModel, highLowNGrams, devParsePath)
+
+    # X = preprocessing.normalize(X)
+    #
+    # pca = PCA(n_components=15)
+    # X = pca.fit_transform(X)
+
+    logger.info("Training SVR")
+    svr = svm.SVR(verbose=True)
+    svr.fit(X_train, y_train)
+
+    # plotData(X_train, y_train, svr)
+
+    y_pred = svr.predict(X_dev)
+    _evaluate(y_pred, y_dev)
 
 
 def _evaluate(y_pred, y_test):
