@@ -40,7 +40,8 @@ Set an environment variable `ROUGE_HOME` with the path to ROUGE root directory, 
 ### Setup Stanford CoreNLP
 https://stanfordnlp.github.io/CoreNLP/index.html#download
 
-Get and setup Stanford CoreNLP and set an environment variable `CORENLP_JAR` with the path to `stanford-corenlp-*.jar` file
+Get and setup Stanford CoreNLP and set an environment variable `CORENLP_JAR` with the path to `stanford-corenlp-*.jar` file.
+Set `CORENLP_HOST` with the address to the CoreNLP server.
 
 ## Setuo KenLM (for TQE training)
 https://github.com/kpu/kenlm

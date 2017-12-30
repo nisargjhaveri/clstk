@@ -21,6 +21,8 @@ if __name__ == '__main__':
                         help='Don\'t train language model. It already exists.')
     parser.add_argument('--ngrams-exists', action='store_true',
                         help='Don\'t compute ngram freqs. It already exists.')
+    parser.add_argument('--parse-exists', action='store_true',
+                        help='Don\'t parse sentences. It already exists.')
 
     args = parser.parse_args()
 
@@ -36,9 +38,11 @@ if __name__ == '__main__':
                 '%(message)s'),
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    logging.getLogger("requests").setLevel(logging.WARNING)
 
     train.train_model(args.workspace_dir,
                       args.model_name,
                       args.evaluate,
                       trainLM=(not args.lm_exists),
-                      trainNGrams=(not args.ngrams_exists))
+                      trainNGrams=(not args.ngrams_exists),
+                      parseSentences=(not args.parse_exists))
