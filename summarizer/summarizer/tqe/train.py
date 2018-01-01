@@ -156,8 +156,8 @@ def _loadParsedSentences(parsedFilePath):
     return parses
 
 
-def _getFeatures(srcSentences, mtSentences,
-                 srcLModel, refLModel, highLowNGrams, parsePath):
+def _computeFeatures(srcSentences, mtSentences,
+                     srcLModel, refLModel, highLowNGrams, parsePath):
     high1grams, low1grams, \
         high2grams, low2grams, \
         high3grams, low3grams = highLowNGrams
@@ -207,33 +207,9 @@ def _getFeatures(srcSentences, mtSentences,
                 )
 
 
-def plotData(X, y, svr):
-    pca = PCA(n_components=2)
-    pcaX = pca.fit_transform(X)
-
-    # X_plot = np.linspace(0, 5, 100000)[:, None]
-    # y_svr = svr.predict(X_plot)
-
-    # sv_ind = svr.support_
-    # plt.scatter(pcaX[sv_ind], y[sv_ind], c='r', label='SVR support vectors',
-    #             zorder=2)
-    plt.scatter(pcaX[:, 0], pcaX[:, 1], c=y, cmap=cm.Oranges, label='data')
-    # plt.plot(X_plot, y_svr, c='r',  label='SVR')
-
-    # plt.xlabel('data')
-    # plt.ylabel('target')
-    # plt.title('')
-    plt.legend()
-
-    plt.show()
-
-
-def train_model(workspaceDir, modelName, devFileSuffix=None,
-                featureFileSuffix=None,
-                trainLM=True, trainNGrams=True, parseSentences=True):
-    logger.info("initializing TQE training")
-    fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
-
+def _prepareFeatures(fileBasename, devFileSuffix=None,
+                     trainLM=True, trainNGrams=True, parseSentences=True):
+    logger.info("Loading data for computing features")
     targetPath = fileBasename + ".hter"
     srcSentencesPath = fileBasename + ".src"
     mtSentencesPath = fileBasename + ".mt"
@@ -308,15 +284,84 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
                      high2grams, low2grams,
                      high3grams, low3grams)
 
-    X_train = np.loadtxt(fileBasename + featureFileSuffix) \
-        if featureFileSuffix \
-        else _getFeatures(srcSentencesTrain, mtSentencesTrain,
-                          srcLModel, refLModel, highLowNGrams, srcParsePath)
+    X_train = _computeFeatures(srcSentencesTrain, mtSentencesTrain,
+                               srcLModel, refLModel, highLowNGrams,
+                               srcParsePath)
 
-    X_dev = np.loadtxt(fileBasename + featureFileSuffix + devFileSuffix) \
-        if featureFileSuffix \
-        else _getFeatures(srcSentencesDev, mtSentencesDev,
-                          srcLModel, refLModel, highLowNGrams, devParsePath)
+    X_dev = _computeFeatures(srcSentencesDev, mtSentencesDev,
+                             srcLModel, refLModel, highLowNGrams, devParsePath)
+
+    return X_train, y_train, X_dev, y_dev
+
+
+def _getFeaturesFromFile(fileBasename, devFileSuffix=None,
+                         featureFileSuffix=None):
+    logger.info("Loading features from file")
+    targetPath = fileBasename + ".hter"
+
+    y = np.clip(np.loadtxt(targetPath), 0, 1)
+    X = np.loadtxt(fileBasename + featureFileSuffix)
+
+    if devFileSuffix:
+        splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
+        train_index, _ = splitter.split(y).next()
+
+        X_dev = np.loadtxt(fileBasename + featureFileSuffix + devFileSuffix)
+        y_dev = np.clip(np.loadtxt(targetPath + devFileSuffix), 0, 1)
+    else:
+        splitter = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
+        train_index, dev_index = splitter.split(y).next()
+
+        X_dev = X[dev_index]
+        y_dev = y[dev_index]
+
+    X_train = X[train_index]
+    y_train = y[train_index]
+
+    return X_train, y_train, X_dev, y_dev
+
+
+def plotData(X, y, svr):
+    pca = PCA(n_components=2)
+    pcaX = pca.fit_transform(X)
+
+    # X_plot = np.linspace(0, 5, 100000)[:, None]
+    # y_svr = svr.predict(X_plot)
+
+    # sv_ind = svr.support_
+    # plt.scatter(pcaX[sv_ind], y[sv_ind], c='r', label='SVR support vectors',
+    #             zorder=2)
+    plt.scatter(pcaX[:, 0], pcaX[:, 1], c=y, cmap=cm.Oranges, label='data')
+    # plt.plot(X_plot, y_svr, c='r',  label='SVR')
+
+    # plt.xlabel('data')
+    # plt.ylabel('target')
+    # plt.title('')
+    plt.legend()
+
+    plt.show()
+
+
+def train_model(workspaceDir, modelName, devFileSuffix=None,
+                featureFileSuffix=None,
+                trainLM=True, trainNGrams=True, parseSentences=True):
+    logger.info("initializing TQE training")
+    fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
+
+    if featureFileSuffix:
+        X_train, y_train, X_dev, y_dev = _getFeaturesFromFile(
+                                            fileBasename,
+                                            devFileSuffix=devFileSuffix,
+                                            featureFileSuffix=featureFileSuffix
+                                            )
+    else:
+        X_train, y_train, X_dev, y_dev = _prepareFeatures(
+                                            fileBasename,
+                                            devFileSuffix=devFileSuffix,
+                                            trainLM=trainLM,
+                                            trainNGrams=trainNGrams,
+                                            parseSentences=parseSentences
+                                            )
 
     # X = preprocessing.normalize(X)
     #
