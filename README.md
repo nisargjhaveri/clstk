@@ -12,6 +12,7 @@ $ git clone https://github.com/nisargjhaveri/summarizer
 - numpy
 - scipy
 - sklearn
+- matplotlib
 - requests
 - polyglot
 - regex
@@ -19,7 +20,7 @@ $ git clone https://github.com/nisargjhaveri/summarizer
 
 Use your preferred method. You may use `pip` as followed.
 ```
-$ pip install nltk numpy scipy sklearn requests polyglot regex
+$ pip install nltk numpy scipy sklearn matplotlib requests polyglot regex
 $ pip install https://github.com/kpu/kenlm/archive/master.zip
 ```
 

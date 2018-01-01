@@ -11,8 +11,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import preprocessing
 
 from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
-from matplotlib import cm
+
+# import matplotlib.pyplot as plt
+# from matplotlib import cm
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
@@ -321,25 +322,26 @@ def _getFeaturesFromFile(fileBasename, devFileSuffix=None,
     return X_train, y_train, X_dev, y_dev
 
 
-def plotData(X, y, svr):
-    pca = PCA(n_components=2)
-    pcaX = pca.fit_transform(X)
-
-    # X_plot = np.linspace(0, 5, 100000)[:, None]
-    # y_svr = svr.predict(X_plot)
-
-    # sv_ind = svr.support_
-    # plt.scatter(pcaX[sv_ind], y[sv_ind], c='r', label='SVR support vectors',
-    #             zorder=2)
-    plt.scatter(pcaX[:, 0], pcaX[:, 1], c=y, cmap=cm.Oranges, label='data')
-    # plt.plot(X_plot, y_svr, c='r',  label='SVR')
-
-    # plt.xlabel('data')
-    # plt.ylabel('target')
-    # plt.title('')
-    plt.legend()
-
-    plt.show()
+# def plotData(X, y, svr):
+#     pca = PCA(n_components=2)
+#     pcaX = pca.fit_transform(X)
+#
+#     # X_plot = np.linspace(0, 5, 100000)[:, None]
+#     # y_svr = svr.predict(X_plot)
+#
+#     # sv_ind = svr.support_
+#     # plt.scatter(pcaX[sv_ind], y[sv_ind], c='r',
+#     #             label='SVR support vectors',
+#     #             zorder=2)
+#     plt.scatter(pcaX[:, 0], pcaX[:, 1], c=y, cmap=cm.Oranges, label='data')
+#     # plt.plot(X_plot, y_svr, c='r',  label='SVR')
+#
+#     # plt.xlabel('data')
+#     # plt.ylabel('target')
+#     # plt.title('')
+#     plt.legend()
+#
+#     plt.show()
 
 
 def train_model(workspaceDir, modelName, devFileSuffix=None,
