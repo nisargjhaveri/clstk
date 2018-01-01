@@ -7,6 +7,7 @@ import regex
 import numpy as np
 from sklearn import svm
 from sklearn.model_selection import ShuffleSplit
+from sklearn.model_selection import ParameterGrid
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import preprocessing
 
@@ -370,17 +371,63 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     # pca = PCA(n_components=15)
     # X = pca.fit_transform(X)
 
+    parameters = [
+        {
+            'kernel': ['rbf'],
+            'gamma': ['auto', 1, 0.5, 0.1, 0.05, 0.01],
+            'C': [0.1, 0.5, 1, 10, 100]
+        },
+        # {
+        #     'kernel': ['linear'],
+        #     'C': [1, 10, 100, 1000]
+        # }
+    ]
+
     logger.info("Training SVR")
     svr = svm.SVR(verbose=True)
-    svr.fit(X_train, y_train)
+
+    results = []
+
+    for params in ParameterGrid(parameters):
+        svr.set_params(**params)
+        svr.fit(X_train, y_train)
+        y_pred = svr.predict(X_dev)
+
+        print params
+        scores = _evaluate(y_pred, y_dev)
+
+        results.append((params, scores))
+
+    logger.info("Printnig results")
+    formatString = "\t".join(["%8s"] * 7)
+    print formatString % ("kernel", "C", "gamma", "MSE", "MAE", "Pearson's r",
+                          "p-value")
+    for row in results:
+        print formatString % (
+            row[0]["kernel"] if "kernel" in row[0] else "-",
+            row[0]["C"] if "C" in row[0] else "-",
+            row[0]["gamma"] if "gamma" in row[0] else "-",
+            ("%1.5f" % row[1]["MSE"]),
+            ("%1.5f" % row[1]["MAE"]),
+            ("%1.5f" % row[1]["pearsonR"][0]),
+            ("%1.5f" % row[1]["pearsonR"][1])
+        )
 
     # plotData(X_train, y_train, svr)
 
-    y_pred = svr.predict(X_dev)
-    _evaluate(y_pred, y_dev)
 
+def _evaluate(y_pred, y_test, output=True):
+    mse = mean_squared_error(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+    pearsonR = pearsonr(y_pred, y_test)
 
-def _evaluate(y_pred, y_test):
-    print "MSE:", mean_squared_error(y_test, y_pred)
-    print "MAE:", mean_absolute_error(y_test, y_pred)
-    print "Pearson's r:", pearsonr(y_pred, y_test)
+    if output:
+        print "MSE:", mse
+        print "MAE:", mae
+        print "Pearson's r:", pearsonR
+
+    return {
+        "MSE": mse,
+        "MAE": mae,
+        "pearsonR": pearsonR
+    }
