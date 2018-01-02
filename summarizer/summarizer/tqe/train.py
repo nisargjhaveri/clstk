@@ -374,8 +374,8 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     parameters = [
         {
             'kernel': ['rbf'],
-            'gamma': ['auto', 1, 0.5, 0.1, 0.05, 0.01],
-            'C': [0.1, 0.5, 1, 10, 100]
+            'gamma': [1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4],
+            'C': [1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3]
         },
         # {
         #     'kernel': ['linear'],
