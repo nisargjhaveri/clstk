@@ -9,7 +9,7 @@ from sklearn import svm
 from sklearn.model_selection import ShuffleSplit
 from sklearn.model_selection import ParameterGrid
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn import preprocessing
+from sklearn.preprocessing import StandardScaler
 
 from sklearn.decomposition import PCA
 
@@ -366,8 +366,12 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
                                             parseSentences=parseSentences
                                             )
 
-    # X = preprocessing.normalize(X)
-    #
+    scaler = StandardScaler()
+    scaler.fit(X_train)
+
+    X_train = scaler.transform(X_train)
+    X_dev = scaler.transform(X_dev)
+
     # pca = PCA(n_components=15)
     # X = pca.fit_transform(X)
 
