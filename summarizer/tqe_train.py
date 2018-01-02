@@ -41,6 +41,7 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
 
     train.train_model(args.workspace_dir,
                       args.model_name,
