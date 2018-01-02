@@ -399,9 +399,8 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
         results.append((params, scores))
 
     logger.info("Printnig results")
-    formatString = "\t".join(["%8s"] * 7)
-    print formatString % ("kernel", "C", "gamma", "MSE", "MAE", "Pearson's r",
-                          "p-value")
+    print "\t".join(["kernel", "C", "gamma", "MSE", "MAE", "PCC", "p-value"])
+    formatString = "\t".join(["%s"] * 7)
     for row in results:
         print formatString % (
             row[0]["kernel"] if "kernel" in row[0] else "-",
@@ -410,7 +409,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
             ("%1.5f" % row[1]["MSE"]),
             ("%1.5f" % row[1]["MAE"]),
             ("%1.5f" % row[1]["pearsonR"][0]),
-            ("%1.5f" % row[1]["pearsonR"][1])
+            ("%.3e" % row[1]["pearsonR"][1])
         )
 
     # plotData(X_train, y_train, svr)
