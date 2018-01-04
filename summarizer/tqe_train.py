@@ -25,6 +25,8 @@ if __name__ == '__main__':
                         help='Don\'t compute ngram freqs. It already exists.')
     parser.add_argument('--parse-exists', action='store_true',
                         help='Don\'t parse sentences. It already exists.')
+    parser.add_argument('--normalize', action='store_true',
+                        help='Weather to normalize features or not.')
 
     args = parser.parse_args()
 
@@ -47,6 +49,7 @@ if __name__ == '__main__':
                       args.model_name,
                       devFileSuffix=args.dev_file_suffix,
                       featureFileSuffix=args.feature_file_suffix,
+                      normalize=args.normalize,
                       trainLM=(not args.lm_exists),
                       trainNGrams=(not args.ngrams_exists),
                       parseSentences=(not args.parse_exists))

@@ -18,6 +18,7 @@ from sklearn.decomposition import PCA
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
+from scipy.stats import spearmanr
 
 from nltk.parse import CoreNLPParser
 
@@ -346,7 +347,7 @@ def _getFeaturesFromFile(fileBasename, devFileSuffix=None,
 
 
 def train_model(workspaceDir, modelName, devFileSuffix=None,
-                featureFileSuffix=None,
+                featureFileSuffix=None, normalize=False,
                 trainLM=True, trainNGrams=True, parseSentences=True):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
@@ -366,11 +367,12 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
                                             parseSentences=parseSentences
                                             )
 
-    scaler = StandardScaler()
-    scaler.fit(X_train)
+    if normalize:
+        scaler = StandardScaler()
+        scaler.fit(X_train)
 
-    X_train = scaler.transform(X_train)
-    X_dev = scaler.transform(X_dev)
+        X_train = scaler.transform(X_train)
+        X_dev = scaler.transform(X_dev)
 
     # pca = PCA(n_components=15)
     # X = pca.fit_transform(X)
@@ -388,7 +390,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     ]
 
     logger.info("Training SVR")
-    svr = svm.SVR(verbose=True)
+    svr = svm.SVR(verbose=True, max_iter=1e7)
 
     results = []
 
@@ -403,8 +405,9 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
         results.append((params, scores))
 
     logger.info("Printnig results")
-    print "\t".join(["kernel", "C", "gamma", "MSE", "MAE", "PCC", "p-value"])
-    formatString = "\t".join(["%s"] * 7)
+    print "\t".join(["kernel", "C", "gamma", "MSE", "MAE", "PCC", "p-value  ",
+                     "SCC", "p-value  "])
+    formatString = "\t".join(["%s"] * 9)
     for row in results:
         print formatString % (
             row[0]["kernel"] if "kernel" in row[0] else "-",
@@ -413,7 +416,9 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
             ("%1.5f" % row[1]["MSE"]),
             ("%1.5f" % row[1]["MAE"]),
             ("%1.5f" % row[1]["pearsonR"][0]),
-            ("%.3e" % row[1]["pearsonR"][1])
+            ("%.3e" % row[1]["pearsonR"][1]),
+            ("%1.5f" % row[1]["spearmanR"][0]),
+            ("%.3e" % row[1]["spearmanR"][1]),
         )
 
     # plotData(X_train, y_train, svr)
@@ -423,14 +428,17 @@ def _evaluate(y_pred, y_test, output=True):
     mse = mean_squared_error(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
     pearsonR = pearsonr(y_pred, y_test)
+    spearmanR = spearmanr(y_pred, y_test)
 
     if output:
         print "MSE:", mse
         print "MAE:", mae
         print "Pearson's r:", pearsonR
+        print "Spearman r:", tuple(spearmanR)
 
     return {
         "MSE": mse,
         "MAE": mae,
-        "pearsonR": pearsonR
+        "pearsonR": pearsonR,
+        "spearmanR": spearmanR
     }
