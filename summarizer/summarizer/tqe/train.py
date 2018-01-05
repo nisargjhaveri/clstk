@@ -2,7 +2,6 @@ import os
 import subprocess
 import collections
 import cPickle
-import regex
 
 import numpy as np
 from sklearn import svm
@@ -114,10 +113,19 @@ def _loadNGramCounts(ngramPath):
 
 
 def _getHighLowFreqNGrams(counter):
-    ngrams = map(lambda x: x[0], counter.most_common())
-    totalCount = len(ngrams)
-    highFreqNGrams = ngrams[:(totalCount / 4)]
-    lowFreqNGrams = ngrams[(3 * totalCount / 4):]
+    highFreqNGrams = set()
+    lowFreqNGrams = set()
+
+    totalCount = sum(counter.values())
+
+    countTillNow = 0
+    for ngram, count in counter.most_common():
+        if countTillNow < totalCount / 4:
+            highFreqNGrams.add(ngram)
+        elif countTillNow >= 3 * totalCount / 4:
+            lowFreqNGrams.add(ngram)
+
+        countTillNow += count
 
     return set(highFreqNGrams), set(lowFreqNGrams)
 
@@ -168,8 +176,6 @@ def _computeFeatures(srcSentences, mtSentences,
     logger.info("Loading parse trees")
     srcParses = _loadParsedSentences(parsePath)
 
-    punc = regex.compile(r'[^\w]', regex.UNICODE)
-
     def _computeSentenceFeatures(srcSentence, mtSentence, srcParse):
         srcTokens = srcSentence.split()
         mtTokens = mtSentence.split()
@@ -181,19 +187,19 @@ def _computeFeatures(srcSentences, mtSentences,
             len(mtTokens),
             np.mean(map(len, srcTokens)),
             np.mean(map(len, mtTokens)),
-            float(len(srcTokens)) / float(len(mtTokens)),
-            float(len(mtTokens)) / float(len(srcTokens)),
-            len(filter(punc.search, srcTokens)),
-            len(filter(punc.search, mtTokens)),
-            float(len(set(mtTokens))) / float(len(mtTokens)),
             srcLModel.score(srcSentence),
             refLModel.score(mtSentence),
-            _getOverlapCount(srcSentence, high1grams, 1) / srcCount,
+            float(len(mtTokens)) / float(len(set(mtTokens))),
+            float(len(srcTokens)) / float(len(mtTokens)),
+            float(len(mtTokens)) / float(len(srcTokens)),
             _getOverlapCount(srcSentence, low1grams, 1) / srcCount,
-            _getOverlapCount(srcSentence, high2grams, 2) / srcCount,
+            _getOverlapCount(srcSentence, high1grams, 1) / srcCount,
             _getOverlapCount(srcSentence, low2grams, 2) / srcCount,
-            _getOverlapCount(srcSentence, high3grams, 3) / srcCount,
+            _getOverlapCount(srcSentence, high2grams, 2) / srcCount,
             _getOverlapCount(srcSentence, low3grams, 3) / srcCount,
+            _getOverlapCount(srcSentence, high3grams, 3) / srcCount,
+            len(filter(lambda x: not x.isalnum(), srcTokens)),
+            len(filter(lambda x: not x.isalnum(), mtTokens)),
             srcParse.height(),
         ]
 
