@@ -347,7 +347,7 @@ def _getFeaturesFromFile(fileBasename, devFileSuffix=None,
 
 
 def train_model(workspaceDir, modelName, devFileSuffix=None,
-                featureFileSuffix=None, normalize=False,
+                featureFileSuffix=None, normalize=False, tune=False,
                 trainLM=True, trainNGrams=True, parseSentences=True):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
@@ -377,17 +377,18 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     # pca = PCA(n_components=15)
     # X = pca.fit_transform(X)
 
-    parameters = [
-        {
+    if tune:
+        parameters = [{
+                'kernel': ['rbf'],
+                'gamma': [1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4],
+                'C': [1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3]
+            }]
+    else:
+        parameters = [{
             'kernel': ['rbf'],
-            'gamma': [1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4],
-            'C': [1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3]
-        },
-        # {
-        #     'kernel': ['linear'],
-        #     'C': [1, 10, 100, 1000]
-        # }
-    ]
+            'gamma': [1e-2],
+            'C': [1e0]
+        }]
 
     logger.info("Training SVR")
     svr = svm.SVR(verbose=True, max_iter=1e7)
