@@ -389,7 +389,8 @@ def _printResult(results, printHeader=False):
 
 def train_model(workspaceDir, modelName, devFileSuffix=None,
                 featureFileSuffix=None, normalize=False, tune=False,
-                trainLM=True, trainNGrams=True, parseSentences=True):
+                trainLM=True, trainNGrams=True, parseSentences=True,
+                maxJobs=-1):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
@@ -434,7 +435,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     logger.info("Training SVR")
     svr = svm.SVR(max_iter=1e7)
 
-    results = Parallel(n_jobs=-1, verbose=10)(
+    results = Parallel(n_jobs=maxJobs, verbose=10)(
         delayed(_fitAndEval)(
             clone(svr), params, X_train, y_train, X_dev, y_dev
         ) for params in ParameterGrid(parameters)

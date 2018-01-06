@@ -29,6 +29,8 @@ if __name__ == '__main__':
                         help='Weather to normalize features or not.')
     parser.add_argument('--tune', action='store_true',
                         help='Weather to normalize features or not.')
+    parser.add_argument('--max-jobs', type=int, default=-1,
+                        help='Maximum number of jobs to run parallelly')
 
     args = parser.parse_args()
 
@@ -55,4 +57,5 @@ if __name__ == '__main__':
                       tune=args.tune,
                       trainLM=(not args.lm_exists),
                       trainNGrams=(not args.ngrams_exists),
-                      parseSentences=(not args.parse_exists))
+                      parseSentences=(not args.parse_exists),
+                      maxJobs=args.max_jobs)
