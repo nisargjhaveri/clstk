@@ -47,9 +47,9 @@ if [ "$PREPARED" = "YES" ]; then
     cat "$MT_FILE" > "$OUT_DIR/$OUT_FILE.mt"
     cat "$REFS_FILE" > "$OUT_DIR/$OUT_FILE.ref"
 else
-    sed -r "s/(.*)\t(.*)/\2\t(\1)/g" "$SRC_FILE" > "$OUT_DIR/$OUT_FILE.src"
-    sed -r "s/(.*)\t(.*)/\2\t(\1)/g" "$MT_FILE" > "$OUT_DIR/$OUT_FILE.mt"
-    sed -r "s/(.*)\t(.*)/\2\t(\1)/g" "$REFS_FILE" > "$OUT_DIR/$OUT_FILE.ref"
+    sed -r "s/([^\t]*)\t(.*)/\2\t(\1)/g" "$SRC_FILE" > "$OUT_DIR/$OUT_FILE.src"
+    sed -r "s/([^\t]*)\t(.*)/\2\t(\1)/g" "$MT_FILE" > "$OUT_DIR/$OUT_FILE.mt"
+    sed -r "s/([^\t]*)\t(.*)/\2\t(\1)/g" "$REFS_FILE" > "$OUT_DIR/$OUT_FILE.ref"
 fi
 
 echo "==> Computing HTER scores <=="
