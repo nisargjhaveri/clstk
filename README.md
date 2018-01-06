@@ -17,10 +17,11 @@ $ git clone https://github.com/nisargjhaveri/summarizer
 - polyglot
 - regex
 - kenlm
+- joblib
 
 Use your preferred method. You may use `pip` as followed.
 ```
-$ pip install -U nltk numpy scipy sklearn matplotlib requests polyglot regex https://github.com/kpu/kenlm/archive/master.zip
+$ pip install -U nltk numpy scipy sklearn matplotlib requests polyglot regex joblib https://github.com/kpu/kenlm/archive/master.zip
 ```
 
 Also install nltk packages called `stopwords` and `punkt`.

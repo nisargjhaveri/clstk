@@ -7,10 +7,11 @@ import numpy as np
 from sklearn import svm
 from sklearn.model_selection import ShuffleSplit
 from sklearn.model_selection import ParameterGrid
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import StandardScaler
 
-from sklearn.decomposition import PCA
+# from sklearn.feature_extraction.text import CountVectorizer
+
+# from sklearn.decomposition import PCA
 
 # import matplotlib.pyplot as plt
 # from matplotlib import cm
@@ -22,6 +23,8 @@ from scipy.stats import spearmanr
 from nltk.parse import CoreNLPParser
 
 from multiprocessing.dummy import Pool
+from joblib import Parallel, delayed
+from sklearn.base import clone
 
 import kenlm
 
@@ -352,6 +355,38 @@ def _getFeaturesFromFile(fileBasename, devFileSuffix=None,
 #     plt.show()
 
 
+def _fitAndEval(svr, params, X_train, y_train, X_dev, y_dev, verbose=False):
+    svr.set_params(**params)
+    svr.fit(X_train, y_train)
+    y_pred = svr.predict(X_dev)
+
+    result = (params, _evaluate(y_pred, y_dev, False))
+    if verbose:
+        _printResult([result])
+
+    return result
+
+
+def _printResult(results, printHeader=False):
+    if printHeader:
+        print "\t".join(["kernel", "C", "gamma", "MSE", "MAE",
+                         "PCC", "p-value  ", "SCC", "p-value  "])
+
+    formatString = "\t".join(["%s"] * 9)
+    for row in results:
+        print formatString % (
+            row[0]["kernel"] if "kernel" in row[0] else "-",
+            row[0]["C"] if "C" in row[0] else "-",
+            row[0]["gamma"] if "gamma" in row[0] else "-",
+            ("%1.5f" % row[1]["MSE"]),
+            ("%1.5f" % row[1]["MAE"]),
+            ("%1.5f" % row[1]["pearsonR"][0]),
+            ("%.3e" % row[1]["pearsonR"][1]),
+            ("%1.5f" % row[1]["spearmanR"][0]),
+            ("%.3e" % row[1]["spearmanR"][1]),
+        )
+
+
 def train_model(workspaceDir, modelName, devFileSuffix=None,
                 featureFileSuffix=None, normalize=False, tune=False,
                 trainLM=True, trainNGrams=True, parseSentences=True):
@@ -387,7 +422,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
         parameters = [{
                 'kernel': ['rbf'],
                 'gamma': [1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4],
-                'C': [1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3]
+                'C': [1e-2, 1e-1, 1e0, 1e1, 1e2]
             }]
     else:
         parameters = [{
@@ -397,36 +432,16 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
         }]
 
     logger.info("Training SVR")
-    svr = svm.SVR(verbose=True, max_iter=1e7)
+    svr = svm.SVR(max_iter=1e7)
 
-    results = []
-
-    for params in ParameterGrid(parameters):
-        svr.set_params(**params)
-        svr.fit(X_train, y_train)
-        y_pred = svr.predict(X_dev)
-
-        print params
-        scores = _evaluate(y_pred, y_dev)
-
-        results.append((params, scores))
+    results = Parallel(n_jobs=-1, verbose=10)(
+        delayed(_fitAndEval)(
+            clone(svr), params, X_train, y_train, X_dev, y_dev
+        ) for params in ParameterGrid(parameters)
+    )
 
     logger.info("Printnig results")
-    print "\t".join(["kernel", "C", "gamma", "MSE", "MAE", "PCC", "p-value  ",
-                     "SCC", "p-value  "])
-    formatString = "\t".join(["%s"] * 9)
-    for row in results:
-        print formatString % (
-            row[0]["kernel"] if "kernel" in row[0] else "-",
-            row[0]["C"] if "C" in row[0] else "-",
-            row[0]["gamma"] if "gamma" in row[0] else "-",
-            ("%1.5f" % row[1]["MSE"]),
-            ("%1.5f" % row[1]["MAE"]),
-            ("%1.5f" % row[1]["pearsonR"][0]),
-            ("%.3e" % row[1]["pearsonR"][1]),
-            ("%1.5f" % row[1]["spearmanR"][0]),
-            ("%.3e" % row[1]["spearmanR"][1]),
-        )
+    _printResult(results, True)
 
     # plotData(X_train, y_train, svr)
 
