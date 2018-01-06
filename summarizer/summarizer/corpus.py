@@ -43,7 +43,7 @@ class Corpus(SentenceCollection):
 
     def _generateSentenceVectors(self):
         def _tokenizeSentence(sentenceText):
-            tokens = map(self._stemmer.stem,
+            tokens = map(self._stemmer,
                          self._wordTokenizer(sentenceText.lower())
                          )
 

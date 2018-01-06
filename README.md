@@ -20,11 +20,13 @@ $ git clone https://github.com/nisargjhaveri/summarizer
 
 Use your preferred method. You may use `pip` as followed.
 ```
-$ pip install nltk numpy scipy sklearn matplotlib requests polyglot regex
-$ pip install https://github.com/kpu/kenlm/archive/master.zip
+$ pip install -U nltk numpy scipy sklearn matplotlib requests polyglot regex https://github.com/kpu/kenlm/archive/master.zip
 ```
 
 Also install nltk packages called `stopwords` and `punkt`.
+```
+$ python -m nltk.downloader stopwords punkt -d $NLTK_DATA
+```
 
 ### Setup CLUTO
 http://glaros.dtc.umn.edu/gkhome/cluto/cluto/download
@@ -32,6 +34,8 @@ http://glaros.dtc.umn.edu/gkhome/cluto/cluto/download
 Set an environment variable `CLUTO_BIN_PATH` with the path of directory containing `vcluster` binary file.
 
 ### Setup ROUGE 1.5.5
+https://github.com/nisargjhaveri/ROUGE-1.5.5-unicode
+
 This is required only if you plan to evaluate the summaries using ROUGE score. You may skip this.
 
 Obtain and setup ROUGE 1.5.5 according to the instructions there.
