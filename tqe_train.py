@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-from summarizer.tqe import train
+from summarizer.tqe import baseline
 
 from summarizer.utils import colors
 
@@ -49,13 +49,13 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-    train.train_model(args.workspace_dir,
-                      args.model_name,
-                      devFileSuffix=args.dev_file_suffix,
-                      featureFileSuffix=args.feature_file_suffix,
-                      normalize=args.normalize,
-                      tune=args.tune,
-                      trainLM=(not args.lm_exists),
-                      trainNGrams=(not args.ngrams_exists),
-                      parseSentences=(not args.parse_exists),
-                      maxJobs=args.max_jobs)
+    baseline.train_model(args.workspace_dir,
+                         args.model_name,
+                         devFileSuffix=args.dev_file_suffix,
+                         featureFileSuffix=args.feature_file_suffix,
+                         normalize=args.normalize,
+                         tune=args.tune,
+                         trainLM=(not args.lm_exists),
+                         trainNGrams=(not args.ngrams_exists),
+                         parseSentences=(not args.parse_exists),
+                         maxJobs=args.max_jobs)
