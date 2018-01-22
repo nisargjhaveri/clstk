@@ -19,11 +19,11 @@ if __name__ == '__main__':
                         help='Suffix for test files')
     parser.add_argument('--feature-file-suffix', type=str, default=None,
                         help='Suffix for feature files')
-    parser.add_argument('--lm-exists', action='store_true',
+    parser.add_argument('--train-lm', action='store_true',
                         help='Don\'t train language model. It already exists.')
-    parser.add_argument('--ngrams-exists', action='store_true',
+    parser.add_argument('--train-ngrams', action='store_true',
                         help='Don\'t compute ngram freqs. It already exists.')
-    parser.add_argument('--parse-exists', action='store_true',
+    parser.add_argument('--parse', action='store_true',
                         help='Don\'t parse sentences. It already exists.')
     parser.add_argument('--normalize', action='store_true',
                         help='Weather to normalize features or not.')
@@ -55,7 +55,7 @@ if __name__ == '__main__':
                          featureFileSuffix=args.feature_file_suffix,
                          normalize=args.normalize,
                          tune=args.tune,
-                         trainLM=(not args.lm_exists),
-                         trainNGrams=(not args.ngrams_exists),
-                         parseSentences=(not args.parse_exists),
+                         trainLM=args.train_lm,
+                         trainNGrams=args.train_ngrams,
+                         parseSentences=args.parse,
                          maxJobs=args.max_jobs)
