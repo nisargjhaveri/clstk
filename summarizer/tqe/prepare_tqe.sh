@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# TODO: Don't use paths here directly
-TERCOM_JAR=~/Libraries/tercom-0.7.25/tercom.7.25.jar
-
 function usage() {
     echo "Usage: prepare_tqe.sh [-h] [--prepared] SRC_FILE MT_FILE REFS_FILE OUT_DIR MODEL_NAME" >&2
     echo "The files have sentence id and tokens per line seperated by tab" >&2
