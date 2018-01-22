@@ -8,20 +8,11 @@ $ git clone https://github.com/nisargjhaveri/summarizer
 ```
 
 ### Python dependencies
-- nltk
-- numpy
-- scipy
-- sklearn
-- matplotlib
-- requests
-- polyglot
-- regex
-- kenlm
-- joblib
+The dependencies are listed in `requirements.txt`.
 
-Use your preferred method. You may use `pip` as followed.
+To install all the dependencies, run `pip` as followed.
 ```
-$ pip install -U nltk numpy scipy sklearn matplotlib requests polyglot regex joblib https://github.com/kpu/kenlm/archive/master.zip
+$ pip install -U -r requirements.txt
 ```
 
 Also install nltk packages called `stopwords` and `punkt`.
