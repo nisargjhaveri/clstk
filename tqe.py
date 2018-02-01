@@ -2,6 +2,7 @@ import argparse
 import logging
 
 from summarizer.tqe import baseline
+from summarizer.tqe import neuralQE
 
 from summarizer.utils import colors
 
@@ -15,6 +16,7 @@ if __name__ == '__main__':
                                        description='TQE model to train')
 
     baseline.setupArgparse(subparsers.add_parser('baseline'))
+    neuralQE.setupArgparse(subparsers.add_parser('neural'))
 
     args = parser.parse_args()
 

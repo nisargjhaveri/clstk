@@ -31,7 +31,7 @@ import kenlm
 from ..utils.progress import ProgressBar
 
 import logging
-logger = logging.getLogger("root")
+logger = logging.getLogger("baseline")
 
 
 def _loadSentences(filePath):
