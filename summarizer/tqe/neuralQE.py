@@ -65,7 +65,7 @@ def _loadSentences(filePath, lower=True, tokenize=True):
 
 
 def _prepareInput(fileBasename, srcVocabTransformer, refVocabTransformer,
-                  devFileSuffix=None, padSentences=False):
+                  devFileSuffix=None):
     logger.info("Loading data")
     targetPath = fileBasename + ".hter"
     srcSentencesPath = fileBasename + ".src"
@@ -114,15 +114,15 @@ def _prepareInput(fileBasename, srcVocabTransformer, refVocabTransformer,
     refSentencesDev = refVocabTransformer.fit_transform(refSentencesDev)
 
     X_train = {
-        "src": srcSentencesTrain,
-        "mt": mtSentencesTrain,
-        "ref": refSentencesTrain
+        "src": pad_sequences(srcSentencesTrain),
+        "mt": pad_sequences(mtSentencesTrain),
+        "ref": pad_sequences(refSentencesTrain)
     }
 
     X_dev = {
-        "src": srcSentencesDev,
-        "mt": mtSentencesDev,
-        "ref": refSentencesDev
+        "src": pad_sequences(srcSentencesDev),
+        "mt": pad_sequences(mtSentencesDev),
+        "ref": pad_sequences(refSentencesDev)
     }
 
     return X_train, y_train, X_dev, y_dev
@@ -229,10 +229,10 @@ def train_model(workspaceDir, modelName, devFileSuffix=None):
 
     logger.info("Training")
     model.fit([
-        pad_sequences(X_train['src']),
-        pad_sequences(X_train['ref'])
+        X_train['src'],
+        X_train['ref']
     ], [
-        pad_sequences(X_train['ref']).reshape((len(X_train['ref']), -1, 1)),
+        X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
     ], batch_size=200, epochs=5)
 
     logger.info("Predicting")
