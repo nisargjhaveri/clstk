@@ -204,14 +204,19 @@ def getModel(srcVocabTransformer, refVocabTransformer):
     model = Model(inputs=[src_input, ref_input], outputs=out)
 
     logger.info("Compiling model")
-    model.compile("adagrad", "sparse_categorical_crossentropy")
+    model.compile(
+            optimizer="adagrad",
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy"]
+        )
 
     _printModelSummary(model)
 
     return model
 
 
-def train_model(workspaceDir, modelName, devFileSuffix=None):
+def train_model(workspaceDir, modelName, devFileSuffix=None,
+                batchSize=50, epochs=15):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
@@ -233,7 +238,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None):
         X_train['ref']
     ], [
         X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
-    ], batch_size=200, epochs=5)
+    ], batch_size=batchSize, epochs=epochs)
 
     logger.info("Predicting")
     # print model.predict([
@@ -246,13 +251,18 @@ def setupArgparse(parser):
     def run(args):
         train_model(args.workspace_dir,
                     args.model_name,
-                    devFileSuffix=args.dev_file_suffix)
+                    devFileSuffix=args.dev_file_suffix,
+                    batchSize=args.batch_size,
+                    epochs=args.epochs)
 
     parser.add_argument('workspace_dir',
                         help='Directory containing prepared files')
     parser.add_argument('model_name',
-                        help='Identifier for prepared files used with ' +
-                        'preparation')
+                        help='Identifier for prepared files')
     parser.add_argument('--dev-file-suffix', type=str, default=None,
                         help='Suffix for test files')
+    parser.add_argument('-b', '--batch-size', type=int, default=50,
+                        help='Batch size')
+    parser.add_argument('-e', '--epochs', type=int, default=15,
+                        help='Number of epochs to run')
     parser.set_defaults(func=run)
