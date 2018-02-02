@@ -240,6 +240,9 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
         X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
     ], batch_size=batchSize, epochs=epochs)
 
+    logger.info("Saving model")
+    model.save(fileBasename + "neural.model.h5")
+
     logger.info("Predicting")
     # print model.predict([
     #     np.array([[1, 2, 3, 1, 1], [1, 2, 1, 3, 1]]),

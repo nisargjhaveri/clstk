@@ -9,4 +9,6 @@ regex
 kenlm
 joblib
 https://github.com/kpu/kenlm/archive/master.zip
+
 keras
+h5py
