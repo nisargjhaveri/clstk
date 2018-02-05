@@ -3,9 +3,12 @@ import os
 import numpy as np
 from sklearn.model_selection import ShuffleSplit
 
-from keras.layers import Input, Embedding, Dense
+from keras.layers import Input, Embedding, Dense, Layer, Reshape
 from keras.layers import RNN, GRU, GRUCell, TimeDistributed, Bidirectional
+from keras.layers import MaxPooling1D
 from keras.models import Model
+
+import keras.backend as K
 
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils.generic_utils import CustomObjectScope
@@ -129,22 +132,96 @@ def _prepareInput(fileBasename, srcVocabTransformer, refVocabTransformer,
 
 
 class AttentionGRUCell(GRUCell):
-    def __init__(self, *args, **kwargs):
-        kwargs.get('attention')
-        super(AttentionGRUCell, self).__init__(*args, **kwargs)
+    def __init__(self, units, *args, **kwargs):
+        super(AttentionGRUCell, self).__init__(units, *args, **kwargs)
 
     def build(self, input_shape):
-        # constants_shape = None
+        self.constants_shape = None
         if isinstance(input_shape, list):
-            # if len(input_shape) > 1:
-            #     constants_shape = input_shape[1:]
+            if len(input_shape) > 1:
+                self.constants_shape = input_shape[1:]
             input_shape = input_shape[0]
 
-        super(AttentionGRUCell, self).build(input_shape)
+        cell_input_shape = list(input_shape)
+        cell_input_shape[-1] += self.constants_shape[0][-1]
+        cell_input_shape = tuple(cell_input_shape)
+
+        super(AttentionGRUCell, self).build(cell_input_shape)
+
+    def attend(self, query, attention_states):
+        # Multiply query with each state per batch
+        attention = K.batch_dot(
+                        attention_states, query,
+                        axes=(attention_states.ndim - 1, query.ndim - 1)
+                    )
+
+        # Take softmax to get weight per timestamp
+        attention = K.softmax(attention)
+
+        # Take weigthed average of attention_states
+        context = K.batch_dot(attention, attention_states)
+
+        return context
 
     def call(self, inputs, states, training=None, constants=None):
-        return super(AttentionGRUCell, self).call(inputs, states,
-                                                  training=training)
+        context = self.attend(states[0], constants[0])
+
+        inputs = K.concatenate([context, inputs])
+
+        cell_out, cell_state = super(AttentionGRUCell, self).call(
+                                            inputs, states, training=training)
+
+        return cell_out, cell_state
+
+
+class AlignStates(Layer):
+    def __init__(self, **kwargs):
+        super(AlignStates, self).__init__(**kwargs)
+
+        self.supports_masking = True  # TODO FIXME
+
+    def rightShift(self, x):
+        return K.concatenate(
+            [
+                K.zeros_like(x[:, -1:]),
+                x[:, :-1]
+            ],
+            axis=1
+        )
+
+    def leftShift(self, x):
+        return K.concatenate(
+            [
+                x[:, 1:],
+                K.zeros_like(x[:, :1])
+            ],
+            axis=1
+        )
+
+    def call(self, x, mask=None):
+        decoder_for, decoder_back, ref_embedding = x
+        s = K.concatenate([
+            self.rightShift(decoder_for),
+            self.leftShift(decoder_back),
+        ])
+        e = K.concatenate([
+            self.rightShift(ref_embedding),
+            self.leftShift(ref_embedding),
+        ])
+        return K.concatenate([s, e])
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0][0], input_shape[0][1],
+                (input_shape[0][2] + input_shape[2][2]) * 2)
+
+
+def TimeDistributedSequential(layers, inputs):
+    input = inputs
+    for layer in layers:
+        input = TimeDistributed(
+                    layer, name="_".join(["td", layer.name])
+                )(input)
+    return input
 
 
 def _printModelSummary(model):
@@ -163,8 +240,11 @@ def _printModelSummary(model):
 def getModel(srcVocabTransformer, refVocabTransformer):
     embedding_size = 300
     hidden_size = 2
+    output_size = 2
     # num_layers = 3
-    # time_stamps = 5
+
+    maxout_size = 2
+    maxout_units = 2
 
     src_vocab_size = srcVocabTransformer.vocab_size()
     ref_vocab_size = refVocabTransformer.vocab_size()
@@ -188,20 +268,33 @@ def getModel(srcVocabTransformer, refVocabTransformer):
                     GRU(hidden_size, return_sequences=True, return_state=True)
             )(src_embedding)
 
+    attention_states = TimeDistributedSequential(
+                            [Dense(hidden_size)],
+                            encoder[0]
+                        )
+
     with CustomObjectScope({'AttentionGRUCell': AttentionGRUCell}):
         decoder = Bidirectional(
-                    RNN(AttentionGRUCell(hidden_size), return_sequences=True)
+                    RNN(AttentionGRUCell(hidden_size), return_sequences=True),
+                    merge_mode=None
                 )(
                     ref_embedding,
                     initial_state=encoder[1:],
-                    constants=encoder[0]
+                    constants=attention_states
                 )
 
-    out = TimeDistributed(
-        Dense(ref_vocab_size, activation='softmax')
-    )(decoder)
+    alignedStates = AlignStates()([decoder[0], decoder[1], ref_embedding])
 
-    model = Model(inputs=[src_input, ref_input], outputs=out)
+    out = TimeDistributedSequential([
+        Dense(maxout_size * maxout_units),  # t_tilda
+        Reshape((-1, 1)),  # Reshaping for maxout to work
+        MaxPooling1D(maxout_units),  # Maxout
+        Reshape((-1,)),  # t
+        Dense(output_size),
+        Dense(ref_vocab_size, activation="softmax"),
+    ], alignedStates)
+
+    model = Model(inputs=[src_input, ref_input], outputs=[out])
 
     logger.info("Compiling model")
     model.compile(
@@ -234,20 +327,30 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
 
     logger.info("Training")
     model.fit([
-        X_train['src'],
-        X_train['ref']
-    ], [
-        X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
-    ], batch_size=batchSize, epochs=epochs)
+            X_train['src'],
+            X_train['ref']
+        ], [
+            X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
+        ],
+        batch_size=batchSize,
+        epochs=epochs,
+        validation_data=([
+                X_dev['src'],
+                X_dev['ref']
+            ], [
+                X_dev['ref'].reshape((len(X_dev['ref']), -1, 1)),
+            ]
+        ))
 
     logger.info("Saving model")
     model.save(fileBasename + "neural.model.h5")
 
     logger.info("Predicting")
-    # print model.predict([
-    #     np.array([[1, 2, 3, 1, 1], [1, 2, 1, 3, 1]]),
-    #     np.array([[1, 1, 1, 1, 1]] * 2)
-    # ])
+    print X_dev['ref']
+    print model.predict([
+        X_dev['src'],
+        X_dev['ref']
+    ])
 
 
 def setupArgparse(parser):
