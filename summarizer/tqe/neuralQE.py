@@ -295,9 +295,9 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
     logger.info("Compiling model")
     model.compile(
-            optimizer="adagrad",
+            optimizer="adadelta",
             loss="sparse_categorical_crossentropy",
-            metrics=["accuracy"]
+            metrics=["sparse_categorical_accuracy"]
         )
 
     _printModelSummary(model)
