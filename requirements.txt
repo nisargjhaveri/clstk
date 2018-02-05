@@ -10,5 +10,6 @@ kenlm
 joblib
 https://github.com/kpu/kenlm/archive/master.zip
 
-keras
+#keras
+https://github.com/nisargjhaveri/keras/archive/master.zip
 h5py
