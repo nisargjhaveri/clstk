@@ -237,15 +237,12 @@ def _printModelSummary(model):
     logger.info("\n".join(model_summary))
 
 
-def getModel(srcVocabTransformer, refVocabTransformer):
-    embedding_size = 300
-    hidden_size = 2
-    output_size = 2
-    # num_layers = 3
-
-    maxout_size = 2
-    maxout_units = 2
-
+def getModel(srcVocabTransformer, refVocabTransformer,
+             embedding_size,
+             gru_size,
+             qualvec_size,
+             maxout_size,
+             maxout_units):
     src_vocab_size = srcVocabTransformer.vocab_size()
     ref_vocab_size = refVocabTransformer.vocab_size()
 
@@ -265,17 +262,17 @@ def getModel(srcVocabTransformer, refVocabTransformer):
                         mask_zero=True)(ref_input)
 
     encoder = Bidirectional(
-                    GRU(hidden_size, return_sequences=True, return_state=True)
+                    GRU(gru_size, return_sequences=True, return_state=True)
             )(src_embedding)
 
     attention_states = TimeDistributedSequential(
-                            [Dense(hidden_size)],
+                            [Dense(gru_size)],
                             encoder[0]
                         )
 
     with CustomObjectScope({'AttentionGRUCell': AttentionGRUCell}):
         decoder = Bidirectional(
-                    RNN(AttentionGRUCell(hidden_size), return_sequences=True),
+                    RNN(AttentionGRUCell(gru_size), return_sequences=True),
                     merge_mode=None
                 )(
                     ref_embedding,
@@ -290,7 +287,7 @@ def getModel(srcVocabTransformer, refVocabTransformer):
         Reshape((-1, 1)),  # Reshaping for maxout to work
         MaxPooling1D(maxout_units),  # Maxout
         Reshape((-1,)),  # t
-        Dense(output_size),
+        Dense(qualvec_size),  # t * W_o2
         Dense(ref_vocab_size, activation="softmax"),
     ], alignedStates)
 
@@ -309,7 +306,7 @@ def getModel(srcVocabTransformer, refVocabTransformer):
 
 
 def train_model(workspaceDir, modelName, devFileSuffix=None,
-                batchSize=50, epochs=15):
+                batchSize=50, epochs=15, **kwargs):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
@@ -323,7 +320,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
                                         devFileSuffix=devFileSuffix,
                                         )
 
-    model = getModel(srcVocabTransformer, refVocabTransformer)
+    model = getModel(srcVocabTransformer, refVocabTransformer, **kwargs)
 
     logger.info("Training")
     model.fit([
@@ -359,7 +356,13 @@ def setupArgparse(parser):
                     args.model_name,
                     devFileSuffix=args.dev_file_suffix,
                     batchSize=args.batch_size,
-                    epochs=args.epochs)
+                    epochs=args.epochs,
+                    embedding_size=args.embedding_size,
+                    gru_size=args.gru_size,
+                    qualvec_size=args.qualvec_size,
+                    maxout_size=args.maxout_size,
+                    maxout_units=args.maxout_units
+                    )
 
     parser.add_argument('workspace_dir',
                         help='Directory containing prepared files')
@@ -371,4 +374,14 @@ def setupArgparse(parser):
                         help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=15,
                         help='Number of epochs to run')
+    parser.add_argument('-m', '--embedding-size', type=int, default=300,
+                        help='Size of word embeddings')
+    parser.add_argument('-n', '--gru-size', type=int, default=500,
+                        help='Size of GRU')
+    parser.add_argument('-q', '--qualvec-size', type=int, default=500,
+                        help='Size of last layer connected before softmax')
+    parser.add_argument('-l', '--maxout-size', type=int, default=500,
+                        help='Size of maxout layer output')
+    parser.add_argument('--maxout-units', type=int, default=2,
+                        help='Number of maxout units')
     parser.set_defaults(func=run)
