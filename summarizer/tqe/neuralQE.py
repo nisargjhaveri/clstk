@@ -3,10 +3,15 @@ import os
 import numpy as np
 from sklearn.model_selection import ShuffleSplit
 
-from keras.layers import Input, Embedding, Dense, Layer, Reshape
+from keras.layers import InputSpec, Layer
+from keras.layers import Input, Embedding, Dense, Reshape, Lambda
 from keras.layers import RNN, GRU, GRUCell, TimeDistributed, Bidirectional
 from keras.layers import MaxPooling1D
 from keras.models import Model
+
+from keras import initializers
+from keras import regularizers
+from keras import constraints
 
 import keras.backend as K
 
@@ -215,6 +220,66 @@ class AlignStates(Layer):
                 (input_shape[0][2] + input_shape[2][2]) * 2)
 
 
+class ElementWise(Layer):
+    def __init__(self, units,
+                 kernel_initializer='glorot_uniform',
+                 kernel_regularizer=None,
+                 kernel_constraint=None,
+                 **kwargs):
+        super(ElementWise, self).__init__(**kwargs)
+        self.units = units
+        self.kernel_initializer = initializers.get(kernel_initializer)
+        self.kernel_regularizer = regularizers.get(kernel_regularizer)
+        self.kernel_constraint = constraints.get(kernel_constraint)
+        self.input_spec = InputSpec(min_ndim=2)
+
+    def build(self, input_shape):
+        self.input_dim = input_shape[-1]
+
+        self.kernel = self.add_weight(shape=(self.input_dim, self.units),
+                                      initializer=self.kernel_initializer,
+                                      name='kernel',
+                                      regularizer=self.kernel_regularizer,
+                                      constraint=self.kernel_constraint)
+
+        self.input_spec = InputSpec(min_ndim=2, axes={-1: self.input_dim})
+        super(ElementWise, self).build(input_shape)
+
+    def call(self, inputs):
+        # Repeat kernel batch_size times
+        kernel = self.kernel.reshape((1, self.input_dim, self.units))
+        kernel = kernel.repeat(inputs.shape[0], 0)
+
+        # Reshape to perform batch_dot
+        kernel = kernel.reshape((-1, self.units, 1))
+        inputs = inputs.reshape((-1, 1, 1))
+
+        return K.batch_dot(
+            inputs,
+            kernel,
+            (1, 2)
+        ).reshape((-1, self.input_dim, self.units))
+
+    def compute_output_shape(self, input_shape):
+        assert input_shape and len(input_shape) == 2
+        assert input_shape[-1]
+        output_shape = list(input_shape) + [self.units]
+        return tuple(output_shape)
+
+    def get_config(self):
+        config = {
+            'units': self.units,
+            'kernel_initializer':
+                initializers.serialize(self.kernel_initializer),
+            'kernel_regularizer':
+                regularizers.serialize(self.kernel_regularizer),
+            'kernel_constraint':
+                constraints.serialize(self.kernel_constraint),
+        }
+        base_config = super(ElementWise, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+
 def TimeDistributedSequential(layers, inputs):
     input = inputs
     for layer in layers:
@@ -288,7 +353,8 @@ def getModel(srcVocabTransformer, refVocabTransformer,
         MaxPooling1D(maxout_units),  # Maxout
         Reshape((-1,)),  # t
         Dense(qualvec_size),  # t * W_o2
-        Dense(ref_vocab_size, activation="softmax"),
+        ElementWise(ref_vocab_size),
+        Lambda(K.sum, output_shape=(ref_vocab_size,), arguments={'axis': 1})
     ], alignedStates)
 
     model = Model(inputs=[src_input, ref_input], outputs=[out])
