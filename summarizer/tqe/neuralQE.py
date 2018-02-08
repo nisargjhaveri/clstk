@@ -3,15 +3,11 @@ import os
 import numpy as np
 from sklearn.model_selection import ShuffleSplit
 
-from keras.layers import InputSpec, Layer
-from keras.layers import Input, Embedding, Dense, Reshape, Lambda
+from keras.layers import Layer, multiply
+from keras.layers import Input, Embedding, Dense, Reshape
 from keras.layers import RNN, GRU, GRUCell, TimeDistributed, Bidirectional
 from keras.layers import MaxPooling1D
 from keras.models import Model
-
-from keras import initializers
-from keras import regularizers
-from keras import constraints
 
 import keras.backend as K
 
@@ -220,72 +216,58 @@ class AlignStates(Layer):
                 (input_shape[0][2] + input_shape[2][2]) * 2)
 
 
-class ElementWise(Layer):
-    def __init__(self, units,
-                 kernel_initializer='glorot_uniform',
-                 kernel_regularizer=None,
-                 kernel_constraint=None,
-                 **kwargs):
-        super(ElementWise, self).__init__(**kwargs)
+class DenseTransposeEmbedding(Layer):
+    def __init__(self, layer, units, mask_zero, **kwargs):
+        self.layer = layer
         self.units = units
-        self.kernel_initializer = initializers.get(kernel_initializer)
-        self.kernel_regularizer = regularizers.get(kernel_regularizer)
-        self.kernel_constraint = constraints.get(kernel_constraint)
-        self.input_spec = InputSpec(min_ndim=2)
+        self.mask_zero = mask_zero
+
+        super(DenseTransposeEmbedding, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        self.input_dim = input_shape[-1]
+        assert self.layer.built
 
-        self.kernel = self.add_weight(shape=(self.input_dim, self.units),
-                                      initializer=self.kernel_initializer,
-                                      name='kernel',
-                                      regularizer=self.kernel_regularizer,
-                                      constraint=self.kernel_constraint)
+        self._trainable_weights.append(self.layer.kernel)
 
-        self.input_spec = InputSpec(min_ndim=2, axes={-1: self.input_dim})
-        super(ElementWise, self).build(input_shape)
+        super(DenseTransposeEmbedding, self).build(input_shape)
 
     def call(self, inputs):
-        # Repeat kernel batch_size times
-        kernel = self.kernel.reshape((1, self.input_dim, self.units))
-        kernel = kernel.repeat(inputs.shape[0], 0)
+        if K.dtype(inputs) != 'int32':
+            inputs = K.cast(inputs, 'int32')
+        out = K.gather(self.layer.kernel.transpose(), inputs)
+        return out
 
-        # Reshape to perform batch_dot
-        kernel = kernel.reshape((-1, self.units, 1))
-        inputs = inputs.reshape((-1, 1, 1))
-
-        return K.batch_dot(
-            inputs,
-            kernel,
-            (1, 2)
-        ).reshape((-1, self.input_dim, self.units))
+    def compute_mask(self, inputs, mask=None):
+        if not self.mask_zero:
+            return None
+        else:
+            return K.not_equal(inputs, 0)
 
     def compute_output_shape(self, input_shape):
-        assert input_shape and len(input_shape) == 2
-        assert input_shape[-1]
-        output_shape = list(input_shape) + [self.units]
-        return tuple(output_shape)
+        return input_shape + (self.units,)
 
     def get_config(self):
         config = {
+            'layer': self.layer,
             'units': self.units,
-            'kernel_initializer':
-                initializers.serialize(self.kernel_initializer),
-            'kernel_regularizer':
-                regularizers.serialize(self.kernel_regularizer),
-            'kernel_constraint':
-                constraints.serialize(self.kernel_constraint),
+            'mask_zero': self.mask_zero
         }
-        base_config = super(ElementWise, self).get_config()
+        base_config = super(DenseTransposeEmbedding, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
 
-def TimeDistributedSequential(layers, inputs):
+def TimeDistributedSequential(layers, inputs, name=None):
+    layer_names = ["_".join(["td", layer.name]) for layer in layers]
+
+    if name:
+        layer_names[-1] = name
+
     input = inputs
-    for layer in layers:
+    for layer, layer_name in zip(layers, layer_names):
         input = TimeDistributed(
-                    layer, name="_".join(["td", layer.name])
+                    layer, name=layer_name
                 )(input)
+
     return input
 
 
@@ -347,23 +329,45 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
     alignedStates = AlignStates()([decoder[0], decoder[1], ref_embedding])
 
-    out = TimeDistributedSequential([
+    out_state = TimeDistributedSequential([
         Dense(maxout_size * maxout_units),  # t_tilda
         Reshape((-1, 1)),  # Reshaping for maxout to work
         MaxPooling1D(maxout_units),  # Maxout
         Reshape((-1,)),  # t
         Dense(qualvec_size),  # t * W_o2
-        ElementWise(ref_vocab_size),
-        Lambda(K.sum, output_shape=(ref_vocab_size,), arguments={'axis': 1})
     ], alignedStates)
 
-    model = Model(inputs=[src_input, ref_input], outputs=[out])
+    out_embeddings = Dense(ref_vocab_size, use_bias=False,
+                           activation='softmax')
+
+    predicted_word = TimeDistributedSequential([
+        out_embeddings
+    ], out_state, name="predicted_word")
+
+    # Extract Quality Vectors
+    W_y = DenseTransposeEmbedding(out_embeddings, qualvec_size,
+                                  mask_zero=True)(ref_input)
+
+    qualvec = multiply([out_state, W_y])
+
+    quality_summary = Bidirectional(GRU(gru_size))(qualvec)
+
+    quality = Dense(1, name="quality")(quality_summary)
+
+    model = Model(inputs=[src_input, ref_input],
+                  outputs=[predicted_word, quality])
 
     logger.info("Compiling model")
     model.compile(
-            optimizer="adadelta",
-            loss="sparse_categorical_crossentropy",
-            metrics=["sparse_categorical_accuracy"]
+            optimizer="adagrad",
+            loss={
+                "predicted_word": "sparse_categorical_crossentropy",
+                "quality": "mse"
+            },
+            metrics={
+                "predicted_word": ["sparse_categorical_accuracy"],
+                "quality": ["mse", "mae"]
+            }
         )
 
     _printModelSummary(model)
@@ -394,6 +398,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
             X_train['ref']
         ], [
             X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
+            y_train
         ],
         batch_size=batchSize,
         epochs=epochs,
@@ -402,14 +407,16 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
                 X_dev['ref']
             ], [
                 X_dev['ref'].reshape((len(X_dev['ref']), -1, 1)),
+                y_dev
             ]
-        ))
+        ),
+        verbose=2
+    )
 
-    logger.info("Saving model")
-    model.save(fileBasename + "neural.model.h5")
+    # logger.info("Saving model")
+    # model.save(fileBasename + "neural.model.h5")
 
     logger.info("Predicting")
-    print X_dev['ref']
     print model.predict([
         X_dev['src'],
         X_dev['ref']
