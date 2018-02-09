@@ -10,10 +10,17 @@ def evaluate(y_pred, y_test, output=True):
     spearmanR = spearmanr(y_pred, y_test)
 
     if output:
-        print "MSE:", mse
-        print "MAE:", mae
-        print "Pearson's r:", pearsonR
-        print "Spearman r:", tuple(spearmanR)
+        print "\t".join([
+            "MSE", "MAE", "PCC", "p-value  ", "SCC", "p-value  "
+        ])
+        print "\t".join([
+            ("%1.5f" % mse),
+            ("%1.5f" % mae),
+            ("%1.5f" % pearsonR[0]),
+            ("%.3e" % pearsonR[1]),
+            ("%1.5f" % spearmanR[0]),
+            ("%.3e" % spearmanR[1]),
+        ])
 
     return {
         "MSE": mse,
