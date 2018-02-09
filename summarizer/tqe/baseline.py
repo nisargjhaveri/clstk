@@ -16,9 +16,7 @@ from sklearn.preprocessing import StandardScaler
 # import matplotlib.pyplot as plt
 # from matplotlib import cm
 
-from sklearn.metrics import mean_squared_error, mean_absolute_error
-from scipy.stats import pearsonr
-from scipy.stats import spearmanr
+from . import utils
 
 from nltk.parse import CoreNLPParser
 
@@ -360,7 +358,7 @@ def _fitAndEval(svr, params, X_train, y_train, X_dev, y_dev, verbose=False):
     svr.fit(X_train, y_train)
     y_pred = svr.predict(X_dev)
 
-    result = (params, _evaluate(y_pred, y_dev, False))
+    result = (params, utils.evaluate(y_pred, y_dev, False))
     if verbose:
         _printResult([result])
 
@@ -445,26 +443,6 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     _printResult(results, True)
 
     # plotData(X_train, y_train, svr)
-
-
-def _evaluate(y_pred, y_test, output=True):
-    mse = mean_squared_error(y_test, y_pred)
-    mae = mean_absolute_error(y_test, y_pred)
-    pearsonR = pearsonr(y_pred, y_test)
-    spearmanR = spearmanr(y_pred, y_test)
-
-    if output:
-        print "MSE:", mse
-        print "MAE:", mae
-        print "Pearson's r:", pearsonR
-        print "Spearman r:", tuple(spearmanR)
-
-    return {
-        "MSE": mse,
-        "MAE": mae,
-        "pearsonR": pearsonR,
-        "spearmanR": spearmanR
-    }
 
 
 def setupArgparse(parser):

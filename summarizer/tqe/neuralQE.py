@@ -1,5 +1,7 @@
 import os
 
+from . import utils
+
 import numpy as np
 from sklearn.model_selection import ShuffleSplit
 
@@ -416,11 +418,11 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     # logger.info("Saving model")
     # model.save(fileBasename + "neural.model.h5")
 
-    logger.info("Predicting")
-    print model.predict([
+    logger.info("Evaluating")
+    utils.evaluate(model.predict([
         X_dev['src'],
         X_dev['ref']
-    ])
+    ])[1], y_dev)
 
 
 def setupArgparse(parser):
