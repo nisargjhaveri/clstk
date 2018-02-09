@@ -422,7 +422,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     utils.evaluate(model.predict([
         X_dev['src'],
         X_dev['ref']
-    ])[1], y_dev)
+    ])[1].reshape((-1,)), y_dev)
 
 
 def setupArgparse(parser):
