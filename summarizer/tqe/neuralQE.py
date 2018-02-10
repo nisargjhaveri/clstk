@@ -151,16 +151,23 @@ def _prepareInput(fileBasename, srcVocabTransformer, refVocabTransformer,
     refSentencesTrain = refVocabTransformer.transform(refSentencesTrain)
     refSentencesDev = refVocabTransformer.transform(refSentencesDev)
 
+    def getMaxLen(listOfsequences):
+        return max([max(map(len, sequences)) for sequences in listOfsequences])
+
+    srcMaxLen = getMaxLen([srcSentencesTrain, srcSentencesDev])
+    refMaxLen = getMaxLen([mtSentencesTrain, mtSentencesDev,
+                           refSentencesTrain, refSentencesDev])
+
     X_train = {
-        "src": pad_sequences(srcSentencesTrain),
-        "mt": pad_sequences(mtSentencesTrain),
-        "ref": pad_sequences(refSentencesTrain)
+        "src": pad_sequences(srcSentencesTrain, maxlen=srcMaxLen),
+        "mt": pad_sequences(mtSentencesTrain, maxlen=refMaxLen),
+        "ref": pad_sequences(refSentencesTrain, maxlen=refMaxLen)
     }
 
     X_dev = {
-        "src": pad_sequences(srcSentencesDev),
-        "mt": pad_sequences(mtSentencesDev),
-        "ref": pad_sequences(refSentencesDev)
+        "src": pad_sequences(srcSentencesDev, maxlen=srcMaxLen),
+        "mt": pad_sequences(mtSentencesDev, maxlen=refMaxLen),
+        "ref": pad_sequences(refSentencesDev, maxlen=refMaxLen)
     }
 
     return X_train, y_train, X_dev, y_dev
