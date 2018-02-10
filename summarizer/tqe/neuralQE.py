@@ -16,27 +16,50 @@ import keras.backend as K
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils.generic_utils import CustomObjectScope
 
+from collections import Counter
+
 
 import logging
 logger = logging.getLogger("neuralQE")
 
 
 class WordIndexTransformer(object):
-    def __init__(self):
+    def __init__(self, vocab_size=None):
         self.nextIndex = 1
+        self.vocabSize = vocab_size
         self.vocabMap = {}
+        self.wordCounts = Counter()
+
+        self.finalized = False
 
     def _getIndex(self, token):
         return self.vocabMap.get(token, 0)
 
     def fit(self, sentences):
+        if self.finalized:
+            raise ValueError("Cannot fit after the transformer is finalized")
+
         for sentence in sentences:
-            for token in sentence:
-                if token not in self.vocabMap:
-                    self.vocabMap[token] = self.nextIndex
-                    self.nextIndex += 1
+            self.wordCounts.update(sentence)
+
+        return self
+
+    def finalize(self):
+        if self.finalized:
+            return
+
+        for token, count in self.wordCounts.most_common():
+            if self.vocabSize is None or self.nextIndex <= self.vocabSize:
+                self.vocabMap[token] = self.nextIndex
+                self.nextIndex += 1
+
+        self.finalized = True
+
+        return self
 
     def transform(self, sentences):
+        self.finalize()
+
         transformedSentences = []
         for sentence in sentences:
             transformedSentences.append(
@@ -111,13 +134,22 @@ def _prepareInput(fileBasename, srcVocabTransformer, refVocabTransformer,
 
     logger.info("Transforming sentences to onehot")
 
-    srcSentencesTrain = srcVocabTransformer.fit_transform(srcSentencesTrain)
-    srcSentencesDev = srcVocabTransformer.fit_transform(srcSentencesDev)
+    srcVocabTransformer \
+        .fit(srcSentencesTrain) \
+        .fit(srcSentencesDev)
 
-    mtSentencesTrain = refVocabTransformer.fit_transform(mtSentencesTrain)
-    mtSentencesDev = refVocabTransformer.fit_transform(mtSentencesDev)
-    refSentencesTrain = refVocabTransformer.fit_transform(refSentencesTrain)
-    refSentencesDev = refVocabTransformer.fit_transform(refSentencesDev)
+    srcSentencesTrain = srcVocabTransformer.transform(srcSentencesTrain)
+    srcSentencesDev = srcVocabTransformer.transform(srcSentencesDev)
+
+    refVocabTransformer.fit(mtSentencesTrain) \
+                       .fit(mtSentencesDev) \
+                       .fit(refSentencesTrain) \
+                       .fit(refSentencesDev)
+
+    mtSentencesTrain = refVocabTransformer.transform(mtSentencesTrain)
+    mtSentencesDev = refVocabTransformer.transform(mtSentencesDev)
+    refSentencesTrain = refVocabTransformer.transform(refSentencesTrain)
+    refSentencesDev = refVocabTransformer.transform(refSentencesDev)
 
     X_train = {
         "src": pad_sequences(srcSentencesTrain),
@@ -378,12 +410,12 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
 
 def train_model(workspaceDir, modelName, devFileSuffix=None,
-                batchSize=50, epochs=15, **kwargs):
+                batchSize=50, epochs=15, vocab_size=None, **kwargs):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
-    srcVocabTransformer = WordIndexTransformer()
-    refVocabTransformer = WordIndexTransformer()
+    srcVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
+    refVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
 
     X_train, y_train, X_dev, y_dev = _prepareInput(
                                         fileBasename,
@@ -432,11 +464,12 @@ def setupArgparse(parser):
                     devFileSuffix=args.dev_file_suffix,
                     batchSize=args.batch_size,
                     epochs=args.epochs,
+                    vocab_size=args.vocab_size,
                     embedding_size=args.embedding_size,
                     gru_size=args.gru_size,
                     qualvec_size=args.qualvec_size,
                     maxout_size=args.maxout_size,
-                    maxout_units=args.maxout_units
+                    maxout_units=args.maxout_units,
                     )
 
     parser.add_argument('workspace_dir',
@@ -457,6 +490,8 @@ def setupArgparse(parser):
                         help='Size of last layer connected before softmax')
     parser.add_argument('-l', '--maxout-size', type=int, default=500,
                         help='Size of maxout layer output')
+    parser.add_argument('-v', '--vocab-size', type=int, default=40000,
+                        help='Maximum vocab size')
     parser.add_argument('--maxout-units', type=int, default=2,
                         help='Number of maxout units')
     parser.set_defaults(func=run)
