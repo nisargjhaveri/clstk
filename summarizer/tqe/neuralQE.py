@@ -438,7 +438,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
         epochs=epochs,
         validation_data=([
                 X_dev['src'],
-                X_dev['ref']
+                X_dev['mt']
             ], [
                 X_dev['ref'].reshape((len(X_dev['ref']), -1, 1)),
                 y_dev
@@ -453,7 +453,7 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     logger.info("Evaluating")
     utils.evaluate(model.predict([
         X_dev['src'],
-        X_dev['ref']
+        X_dev['mt']
     ])[1].reshape((-1,)), y_dev)
 
 
