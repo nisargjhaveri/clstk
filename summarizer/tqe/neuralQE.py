@@ -312,11 +312,14 @@ def TimeDistributedSequential(layers, inputs, name=None):
     return input
 
 
-def _printModelSummary(model):
+def _printModelSummary(model, name):
     # from keras.utils import plot_model
     # plot_model(model, to_file='model.png')
 
     model_summary = ["Printing model summary"]
+
+    if name:
+        model_summary += ["Model " + name]
 
     def summary_capture(line):
         model_summary.append(line)
@@ -413,7 +416,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "quality": ["mse", "mae"]
             }
         )
-    _printModelSummary(model_multitask)
+    _printModelSummary(model_multitask, "model_multitask")
 
     model_predictor = Model(inputs=[src_input, ref_input],
                             outputs=[predicted_word])
@@ -426,7 +429,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "predicted_word": ["sparse_categorical_accuracy"],
             }
         )
-    _printModelSummary(model_predictor)
+    _printModelSummary(model_predictor, "model_predictor")
 
     model_estimator = Model(inputs=[src_input, ref_input],
                             outputs=[quality])
@@ -449,7 +452,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
             }
         )
 
-    _printModelSummary(model_estimator)
+    _printModelSummary(model_estimator, "model_estimator")
 
     return model_multitask, model_predictor, model_estimator
 
