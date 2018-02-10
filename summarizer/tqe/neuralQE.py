@@ -342,26 +342,30 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     src_embedding = Embedding(
                         output_dim=embedding_size,
                         input_dim=src_vocab_size,
-                        mask_zero=True)(src_input)
+                        mask_zero=True,
+                        name="src_embedding")(src_input)
 
     ref_embedding = Embedding(
                         output_dim=embedding_size,
                         input_dim=ref_vocab_size,
-                        mask_zero=True)(ref_input)
+                        mask_zero=True,
+                        name="ref_embedding")(ref_input)
 
     encoder = Bidirectional(
-                    GRU(gru_size, return_sequences=True, return_state=True)
+                    GRU(gru_size, return_sequences=True, return_state=True),
+                    name="encoder"
             )(src_embedding)
 
     attention_states = TimeDistributedSequential(
-                            [Dense(gru_size)],
+                            [Dense(gru_size, name="attention_state")],
                             encoder[0]
                         )
 
     with CustomObjectScope({'AttentionGRUCell': AttentionGRUCell}):
         decoder = Bidirectional(
                     RNN(AttentionGRUCell(gru_size), return_sequences=True),
-                    merge_mode=None
+                    merge_mode=None,
+                    name="decoder"
                 )(
                     ref_embedding,
                     initial_state=encoder[1:],
@@ -371,11 +375,11 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     alignedStates = AlignStates()([decoder[0], decoder[1], ref_embedding])
 
     out_state = TimeDistributedSequential([
-        Dense(maxout_size * maxout_units),  # t_tilda
+        Dense(maxout_size * maxout_units, name="t_tilda"),  # t_tilda
         Reshape((-1, 1)),  # Reshaping for maxout to work
         MaxPooling1D(maxout_units),  # Maxout
         Reshape((-1,)),  # t
-        Dense(qualvec_size),  # t * W_o2
+        Dense(qualvec_size, name="t_out"),  # t * W_o2
     ], alignedStates)
 
     out_embeddings = Dense(ref_vocab_size, use_bias=False,
@@ -387,19 +391,18 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
     # Extract Quality Vectors
     W_y = DenseTransposeEmbedding(out_embeddings, qualvec_size,
-                                  mask_zero=True)(ref_input)
+                                  mask_zero=True, name="W_y")(ref_input)
 
     qualvec = multiply([out_state, W_y])
 
-    quality_summary = Bidirectional(GRU(gru_size))(qualvec)
+    quality_summary = Bidirectional(GRU(gru_size), name="estimator")(qualvec)
 
     quality = Dense(1, name="quality")(quality_summary)
 
-    model = Model(inputs=[src_input, ref_input],
-                  outputs=[predicted_word, quality])
-
     logger.info("Compiling model")
-    model.compile(
+    model_multitask = Model(inputs=[src_input, ref_input],
+                            outputs=[predicted_word, quality])
+    model_multitask.compile(
             optimizer="adagrad",
             loss={
                 "predicted_word": "sparse_categorical_crossentropy",
@@ -410,10 +413,45 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "quality": ["mse", "mae"]
             }
         )
+    _printModelSummary(model_multitask)
 
-    _printModelSummary(model)
+    model_predictor = Model(inputs=[src_input, ref_input],
+                            outputs=[predicted_word])
+    model_predictor.compile(
+            optimizer="adagrad",
+            loss={
+                "predicted_word": "sparse_categorical_crossentropy",
+            },
+            metrics={
+                "predicted_word": ["sparse_categorical_accuracy"],
+            }
+        )
+    _printModelSummary(model_predictor)
 
-    return model
+    model_estimator = Model(inputs=[src_input, ref_input],
+                            outputs=[quality])
+
+    model_estimator.get_layer('src_embedding').trainable = False
+    model_estimator.get_layer('ref_embedding').trainable = False
+    model_estimator.get_layer('encoder').trainable = False
+    model_estimator.get_layer('decoder').trainable = False
+    model_estimator.get_layer('td_attention_state').trainable = False
+    model_estimator.get_layer('td_t_tilda').trainable = False
+    model_estimator.get_layer('td_t_out').trainable = False
+
+    model_estimator.compile(
+            optimizer="adagrad",
+            loss={
+                "quality": "mse"
+            },
+            metrics={
+                "quality": ["mse", "mae"]
+            }
+        )
+
+    _printModelSummary(model_estimator)
+
+    return model_multitask, model_predictor, model_estimator
 
 
 def train_model(workspaceDir, modelName, devFileSuffix=None,
@@ -431,10 +469,11 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
                                         devFileSuffix=devFileSuffix,
                                         )
 
-    model = getModel(srcVocabTransformer, refVocabTransformer, **kwargs)
+    model_multitask, model_predictor, model_estimator = \
+        getModel(srcVocabTransformer, refVocabTransformer, **kwargs)
 
     logger.info("Training")
-    model.fit([
+    model_multitask.fit([
             X_train['src'],
             X_train['ref']
         ], [
@@ -458,10 +497,10 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     # model.save(fileBasename + "neural.model.h5")
 
     logger.info("Evaluating")
-    utils.evaluate(model.predict([
+    utils.evaluate(model_estimator.predict([
         X_dev['src'],
         X_dev['mt']
-    ])[1].reshape((-1,)), y_dev)
+    ]).reshape((-1,)), y_dev)
 
 
 def setupArgparse(parser):
