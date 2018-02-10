@@ -454,8 +454,9 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     return model_multitask, model_predictor, model_estimator
 
 
-def train_model(workspaceDir, modelName, devFileSuffix=None,
-                batchSize=50, epochs=15, vocab_size=None, **kwargs):
+def train_model(workspaceDir, modelName, devFileSuffix,
+                batchSize, epochs, vocab_size, training_mode,
+                **kwargs):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
@@ -473,25 +474,65 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
         getModel(srcVocabTransformer, refVocabTransformer, **kwargs)
 
     logger.info("Training")
-    model_multitask.fit([
-            X_train['src'],
-            X_train['ref']
-        ], [
-            X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
-            y_train
-        ],
-        batch_size=batchSize,
-        epochs=epochs,
-        validation_data=([
-                X_dev['src'],
-                X_dev['mt']
+    if training_mode == "multitask":
+        logger.info("Using multitask training")
+        model_multitask.fit([
+                X_train['src'],
+                X_train['ref']
             ], [
-                X_dev['ref'].reshape((len(X_dev['ref']), -1, 1)),
-                y_dev
-            ]
-        ),
-        verbose=2
-    )
+                X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
+                y_train
+            ],
+            batch_size=batchSize,
+            epochs=epochs,
+            validation_data=([
+                    X_dev['src'],
+                    X_dev['mt']
+                ], [
+                    X_dev['ref'].reshape((len(X_dev['ref']), -1, 1)),
+                    y_dev
+                ]
+            ),
+            verbose=2
+        )
+    elif training_mode == "two-step":
+        logger.info("Using two-step training")
+        model_predictor.fit([
+                X_train['src'],
+                X_train['ref']
+            ], [
+                X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
+            ],
+            batch_size=batchSize,
+            epochs=epochs,
+            validation_data=([
+                    X_dev['src'],
+                    X_dev['mt']
+                ], [
+                    X_dev['ref'].reshape((len(X_dev['ref']), -1, 1)),
+                ]
+            ),
+            verbose=2
+        )
+        model_estimator.fit([
+                X_train['src'],
+                X_train['ref']
+            ], [
+                y_train
+            ],
+            batch_size=batchSize,
+            epochs=epochs,
+            validation_data=([
+                    X_dev['src'],
+                    X_dev['mt']
+                ], [
+                    y_dev
+                ]
+            ),
+            verbose=2
+        )
+    else:
+        raise ValueError("Training mode not recognized")
 
     # logger.info("Saving model")
     # model.save(fileBasename + "neural.model.h5")
@@ -516,6 +557,7 @@ def setupArgparse(parser):
                     qualvec_size=args.qualvec_size,
                     maxout_size=args.maxout_size,
                     maxout_units=args.maxout_units,
+                    training_mode="two-step" if args.two_step else "multitask",
                     )
 
     parser.add_argument('workspace_dir',
@@ -540,4 +582,6 @@ def setupArgparse(parser):
                         help='Maximum vocab size')
     parser.add_argument('--maxout-units', type=int, default=2,
                         help='Number of maxout units')
+    parser.add_argument('--two-step', action="store_true", default=False,
+                        help='Use two step training instead of multitask')
     parser.set_defaults(func=run)
