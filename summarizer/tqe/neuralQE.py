@@ -93,9 +93,23 @@ def _loadSentences(filePath, lower=True, tokenize=True):
     return np.array(sentences, dtype=object)
 
 
-def _prepareInput(fileBasename, srcVocabTransformer, refVocabTransformer,
-                  devFileSuffix=None):
-    logger.info("Loading data")
+def _loadPredictorData(fileBasename):
+    predictorData = {
+        "src": [],
+        "ref": []
+    }
+
+    if fileBasename:
+        srcSentencesPath = fileBasename + ".src"
+        refSentencesPath = fileBasename + ".ref"
+
+        predictorData['src'] = _loadSentences(srcSentencesPath)
+        predictorData['ref'] = _loadSentences(refSentencesPath)
+
+    return predictorData
+
+
+def _loadData(fileBasename, devFileSuffix=None):
     targetPath = fileBasename + ".hter"
     srcSentencesPath = fileBasename + ".src"
     mtSentencesPath = fileBasename + ".mt"
@@ -132,24 +146,57 @@ def _prepareInput(fileBasename, srcVocabTransformer, refVocabTransformer,
 
     y_train = y[train_index]
 
+    X_train = {
+        "src": srcSentencesTrain,
+        "mt": mtSentencesTrain,
+        "ref": refSentencesTrain
+    }
+    X_dev = {
+        "src": srcSentencesDev,
+        "mt": mtSentencesDev,
+        "ref": refSentencesDev
+    }
+
+    return X_train, y_train, X_dev, y_dev
+
+
+def _prepareInput(workspaceDir, modelName,
+                  srcVocabTransformer, refVocabTransformer,
+                  devFileSuffix=None, predictorDataModel=None):
+    logger.info("Loading data")
+
+    X_train, y_train, X_dev, y_dev = _loadData(
+                    os.path.join(workspaceDir, "tqe." + modelName),
+                    devFileSuffix
+                )
+
+    pred_train = _loadPredictorData(
+                    os.path.join(workspaceDir, "tqe." + predictorDataModel)
+                    if predictorDataModel else None
+                )
+
     logger.info("Transforming sentences to onehot")
 
     srcVocabTransformer \
-        .fit(srcSentencesTrain) \
-        .fit(srcSentencesDev)
+        .fit(X_train['src']) \
+        .fit(X_dev['src']) \
+        .fit(pred_train['src'])
 
-    srcSentencesTrain = srcVocabTransformer.transform(srcSentencesTrain)
-    srcSentencesDev = srcVocabTransformer.transform(srcSentencesDev)
+    srcSentencesTrain = srcVocabTransformer.transform(X_train['src'])
+    srcSentencesDev = srcVocabTransformer.transform(X_dev['src'])
+    srcPredictorTrain = srcVocabTransformer.transform(pred_train['src'])
 
-    refVocabTransformer.fit(mtSentencesTrain) \
-                       .fit(mtSentencesDev) \
-                       .fit(refSentencesTrain) \
-                       .fit(refSentencesDev)
+    refVocabTransformer.fit(X_train['mt']) \
+                       .fit(X_dev['mt']) \
+                       .fit(X_train['ref']) \
+                       .fit(X_dev['ref']) \
+                       .fit(pred_train['ref'])
 
-    mtSentencesTrain = refVocabTransformer.transform(mtSentencesTrain)
-    mtSentencesDev = refVocabTransformer.transform(mtSentencesDev)
-    refSentencesTrain = refVocabTransformer.transform(refSentencesTrain)
-    refSentencesDev = refVocabTransformer.transform(refSentencesDev)
+    mtSentencesTrain = refVocabTransformer.transform(X_train['mt'])
+    mtSentencesDev = refVocabTransformer.transform(X_dev['mt'])
+    refSentencesTrain = refVocabTransformer.transform(X_train['ref'])
+    refSentencesDev = refVocabTransformer.transform(X_dev['ref'])
+    refPredictorTrain = refVocabTransformer.transform(pred_train['ref'])
 
     def getMaxLen(listOfsequences):
         return max([max(map(len, sequences)) for sequences in listOfsequences])
@@ -170,7 +217,12 @@ def _prepareInput(fileBasename, srcVocabTransformer, refVocabTransformer,
         "ref": pad_sequences(refSentencesDev, maxlen=refMaxLen)
     }
 
-    return X_train, y_train, X_dev, y_dev
+    pred_train = {
+        "src": pad_sequences(srcPredictorTrain, maxlen=srcMaxLen),
+        "ref": pad_sequences(refPredictorTrain, maxlen=refMaxLen),
+    } if predictorDataModel else None
+
+    return X_train, y_train, X_dev, y_dev, pred_train
 
 
 class AttentionGRUCell(GRUCell):
@@ -459,45 +511,55 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
 def train_model(workspaceDir, modelName, devFileSuffix,
                 batchSize, epochs, vocab_size, training_mode,
-                save_predictor, load_predictor,
+                predictor_model, predictor_data,
                 **kwargs):
     logger.info("initializing TQE training")
-    fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
-    predictorSaveFile = None
-    if save_predictor:
-        predictorSaveFile = os.path.join(
+    predictorModelFile = None
+    if predictor_model:
+        predictorModelFile = os.path.join(
                         workspaceDir,
-                        ".".join(["tqe", save_predictor, "predictor.model"])
-                    )
-
-    predictorLoadFile = None
-    if load_predictor:
-        predictorLoadFile = os.path.join(
-                        workspaceDir,
-                        ".".join(["tqe", load_predictor, "predictor.model"])
+                        ".".join(["tqe", predictor_model, "predictor.model"])
                     )
 
     srcVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
     refVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
 
-    X_train, y_train, X_dev, y_dev = _prepareInput(
-                                        fileBasename,
+    X_train, y_train, X_dev, y_dev, pred_train = _prepareInput(
+                                        workspaceDir,
+                                        modelName,
                                         srcVocabTransformer,
                                         refVocabTransformer,
                                         devFileSuffix=devFileSuffix,
+                                        predictorDataModel=predictor_data
                                         )
 
     model_multitask, model_predictor, model_estimator = \
         getModel(srcVocabTransformer, refVocabTransformer, **kwargs)
 
-    if predictorLoadFile:
+    if predictorModelFile and not pred_train:
         logger.info("Loading weights for predictor")
-        model_predictor.load_weights(predictorLoadFile)
+        model_predictor.load_weights(predictorModelFile)
 
     logger.info("Training")
-    if training_mode not in ["multitask", "two-step", "predictor"]:
+    if training_mode not in ["multitask", "two-step"]:
         raise ValueError("Training mode not recognized")
+
+    if pred_train:
+        logger.info("Training predictor on predictor data")
+        model_predictor.fit([
+                pred_train['src'],
+                pred_train['ref']
+            ], [
+                pred_train['ref'].reshape((len(pred_train['ref']), -1, 1)),
+            ],
+            batch_size=batchSize,
+            epochs=epochs,
+            verbose=2
+        )
+        if predictorModelFile:
+            logger.info("Saving weights for predictor")
+            model_predictor.save_weights(predictorModelFile)
 
     if training_mode == "multitask":
         logger.info("Training multitask model")
@@ -521,7 +583,7 @@ def train_model(workspaceDir, modelName, devFileSuffix,
             verbose=2
         )
 
-    if training_mode == "two-step" or training_mode == "predictor":
+    if training_mode == "two-step":
         logger.info("Training predictor")
         model_predictor.fit([
                 X_train['src'],
@@ -540,12 +602,6 @@ def train_model(workspaceDir, modelName, devFileSuffix,
             ),
             verbose=2
         )
-
-    if predictorSaveFile:
-        logger.info("Saving weights for predictor")
-        model_predictor.save_weights(predictorSaveFile)
-
-    if training_mode == "two-step":
         logger.info("Training estimator")
         model_estimator.fit([
                 X_train['src'],
@@ -577,8 +633,6 @@ def train_model(workspaceDir, modelName, devFileSuffix,
 
 def setupArgparse(parser):
     def _get_training_mode(args):
-        if args.only_predictor:
-            return "predictor"
         if args.two_step:
             return "two-step"
         else:
@@ -597,8 +651,8 @@ def setupArgparse(parser):
                     maxout_size=args.maxout_size,
                     maxout_units=args.maxout_units,
                     training_mode=_get_training_mode(args),
-                    save_predictor=args.save_predictor,
-                    load_predictor=args.load_predictor
+                    predictor_model=args.predictor_model,
+                    predictor_data=args.predictor_data,
                     )
 
     parser.add_argument('workspace_dir',
@@ -623,12 +677,10 @@ def setupArgparse(parser):
                         help='Maximum vocab size')
     parser.add_argument('--maxout-units', type=int, default=2,
                         help='Number of maxout units')
-    parser.add_argument('--save-predictor', type=str, default=None,
-                        help='Name of predictor model to save')
-    parser.add_argument('--load-predictor', type=str, default=None,
-                        help='Name of predictor model to load from')
+    parser.add_argument('--predictor-model', type=str, default=None,
+                        help='Name of predictor model to save/load from')
     parser.add_argument('--two-step', action="store_true",
                         help='Use two step training instead of multitask')
-    parser.add_argument('--only-predictor', action="store_true",
-                        help='Only train predictor model')
+    parser.add_argument('--predictor-data', type=str, default=None,
+                        help='Identifier for prepared data to train predictor')
     parser.set_defaults(func=run)
