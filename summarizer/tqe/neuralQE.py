@@ -459,9 +459,24 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
 def train_model(workspaceDir, modelName, devFileSuffix,
                 batchSize, epochs, vocab_size, training_mode,
+                save_predictor, load_predictor,
                 **kwargs):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
+
+    predictorSaveFile = None
+    if save_predictor:
+        predictorSaveFile = os.path.join(
+                        workspaceDir,
+                        ".".join(["tqe", save_predictor, "predictor.model"])
+                    )
+
+    predictorLoadFile = None
+    if load_predictor:
+        predictorLoadFile = os.path.join(
+                        workspaceDir,
+                        ".".join(["tqe", load_predictor, "predictor.model"])
+                    )
 
     srcVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
     refVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
@@ -476,9 +491,16 @@ def train_model(workspaceDir, modelName, devFileSuffix,
     model_multitask, model_predictor, model_estimator = \
         getModel(srcVocabTransformer, refVocabTransformer, **kwargs)
 
+    if predictorLoadFile:
+        logger.info("Loading weights for predictor")
+        model_predictor.load_weights(predictorLoadFile)
+
     logger.info("Training")
+    if training_mode not in ["multitask", "two-step", "predictor"]:
+        raise ValueError("Training mode not recognized")
+
     if training_mode == "multitask":
-        logger.info("Using multitask training")
+        logger.info("Training multitask model")
         model_multitask.fit([
                 X_train['src'],
                 X_train['ref']
@@ -498,8 +520,9 @@ def train_model(workspaceDir, modelName, devFileSuffix,
             ),
             verbose=2
         )
-    elif training_mode == "two-step":
-        logger.info("Using two-step training")
+
+    if training_mode == "two-step" or training_mode == "predictor":
+        logger.info("Training predictor")
         model_predictor.fit([
                 X_train['src'],
                 X_train['ref']
@@ -517,6 +540,13 @@ def train_model(workspaceDir, modelName, devFileSuffix,
             ),
             verbose=2
         )
+
+    if predictorSaveFile:
+        logger.info("Saving weights for predictor")
+        model_predictor.save_weights(predictorSaveFile)
+
+    if training_mode == "two-step":
+        logger.info("Training estimator")
         model_estimator.fit([
                 X_train['src'],
                 X_train['ref']
@@ -534,8 +564,6 @@ def train_model(workspaceDir, modelName, devFileSuffix,
             ),
             verbose=2
         )
-    else:
-        raise ValueError("Training mode not recognized")
 
     # logger.info("Saving model")
     # model.save(fileBasename + "neural.model.h5")
@@ -548,6 +576,14 @@ def train_model(workspaceDir, modelName, devFileSuffix,
 
 
 def setupArgparse(parser):
+    def _get_training_mode(args):
+        if args.only_predictor:
+            return "predictor"
+        if args.two_step:
+            return "two-step"
+        else:
+            return "multitask"
+
     def run(args):
         train_model(args.workspace_dir,
                     args.model_name,
@@ -560,7 +596,9 @@ def setupArgparse(parser):
                     qualvec_size=args.qualvec_size,
                     maxout_size=args.maxout_size,
                     maxout_units=args.maxout_units,
-                    training_mode="two-step" if args.two_step else "multitask",
+                    training_mode=_get_training_mode(args),
+                    save_predictor=args.save_predictor,
+                    load_predictor=args.load_predictor
                     )
 
     parser.add_argument('workspace_dir',
@@ -585,6 +623,12 @@ def setupArgparse(parser):
                         help='Maximum vocab size')
     parser.add_argument('--maxout-units', type=int, default=2,
                         help='Number of maxout units')
-    parser.add_argument('--two-step', action="store_true", default=False,
+    parser.add_argument('--save-predictor', type=str, default=None,
+                        help='Name of predictor model to save')
+    parser.add_argument('--load-predictor', type=str, default=None,
+                        help='Name of predictor model to load from')
+    parser.add_argument('--two-step', action="store_true",
                         help='Use two step training instead of multitask')
+    parser.add_argument('--only-predictor', action="store_true",
+                        help='Only train predictor model')
     parser.set_defaults(func=run)
