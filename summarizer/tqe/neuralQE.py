@@ -5,7 +5,7 @@ from . import utils
 import numpy as np
 from sklearn.model_selection import ShuffleSplit
 
-from keras.layers import Layer, multiply
+from keras.layers import Layer, Lambda, multiply, concatenate
 from keras.layers import Input, Embedding, Dense, Reshape
 from keras.layers import RNN, GRU, GRUCell, TimeDistributed, Bidirectional
 from keras.layers import MaxPooling1D
@@ -448,7 +448,14 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     W_y = DenseTransposeEmbedding(out_embeddings, qualvec_size,
                                   mask_zero=True, name="W_y")(ref_input)
 
-    qualvec = multiply([out_state, W_y])
+    qualvec_pre = multiply([out_state, W_y], name="pre_qevf")  # Pre-QEVF
+    qualvec_post = Lambda(
+        K.concatenate,
+        output_shape=lambda x: (x[0][0], x[0][1], x[0][2] + x[1][2]),
+        name="post_qevf"
+    )(decoder)  # Post-QEVF
+
+    qualvec = concatenate([qualvec_pre, qualvec_post], name="qualvec")
 
     quality_summary = Bidirectional(GRU(gru_size), name="estimator")(qualvec)
 
