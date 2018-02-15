@@ -10,6 +10,7 @@ from keras.layers import Input, Embedding, Dense, Reshape
 from keras.layers import RNN, GRU, GRUCell, TimeDistributed, Bidirectional
 from keras.layers import MaxPooling1D
 from keras.models import Model
+from keras.callbacks import ModelCheckpoint
 
 import keras.backend as K
 
@@ -554,6 +555,9 @@ def train_model(workspaceDir, modelName, devFileSuffix,
 
     if pred_train:
         logger.info("Training predictor on predictor data")
+        checkpointer = ModelCheckpoint(
+                            filepath=(predictorModelFile + ".{epoch:02d}"),
+                            save_weights_only=True)
         model_predictor.fit([
                 pred_train['src'],
                 pred_train['ref']
@@ -562,7 +566,8 @@ def train_model(workspaceDir, modelName, devFileSuffix,
             ],
             batch_size=batchSize,
             epochs=epochs,
-            verbose=2
+            verbose=2,
+            callbacks=[checkpointer]
         )
         if predictorModelFile:
             logger.info("Saving weights for predictor")
