@@ -555,9 +555,13 @@ def train_model(workspaceDir, modelName, devFileSuffix,
 
     if pred_train:
         logger.info("Training predictor on predictor data")
-        checkpointer = ModelCheckpoint(
+
+        callbacks = None
+        if predictorModelFile:
+            callbacks = [ModelCheckpoint(
                             filepath=(predictorModelFile + ".{epoch:02d}"),
-                            save_weights_only=True)
+                            save_weights_only=True)]
+
         model_predictor.fit([
                 pred_train['src'],
                 pred_train['ref']
@@ -567,7 +571,7 @@ def train_model(workspaceDir, modelName, devFileSuffix,
             batch_size=batchSize,
             epochs=epochs,
             verbose=2,
-            callbacks=[checkpointer]
+            callbacks=callbacks
         )
         if predictorModelFile:
             logger.info("Saving weights for predictor")
