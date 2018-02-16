@@ -91,7 +91,7 @@ def _loadSentences(filePath, lower=True, tokenize=True):
     with open(filePath) as lines:
         sentences = map(_processLine, list(lines))
 
-    return np.array(sentences, dtype=object)[:20]
+    return np.array(sentences, dtype=object)
 
 
 def _loadPredictorData(fileBasename):
