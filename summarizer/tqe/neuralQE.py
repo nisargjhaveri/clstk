@@ -5,7 +5,7 @@ from . import utils
 import numpy as np
 from sklearn.model_selection import ShuffleSplit
 
-from keras.layers import Layer, Lambda, multiply, concatenate
+from keras.layers import Layer, multiply, concatenate
 from keras.layers import Input, Embedding, Dense, Reshape
 from keras.layers import RNN, GRU, GRUCell, TimeDistributed, Bidirectional
 from keras.layers import MaxPooling1D
@@ -273,8 +273,6 @@ class AlignStates(Layer):
     def __init__(self, **kwargs):
         super(AlignStates, self).__init__(**kwargs)
 
-        self.supports_masking = True  # TODO FIXME
-
     def rightShift(self, x):
         return K.concatenate(
             [
@@ -304,6 +302,9 @@ class AlignStates(Layer):
             self.leftShift(ref_embedding),
         ])
         return K.concatenate([s, e])
+
+    def compute_mask(self, inputs, mask=None):
+        return mask[-1]
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0][0], input_shape[0][1],
@@ -350,6 +351,19 @@ class DenseTransposeEmbedding(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
+class ConcatDecoder(Layer):
+    def call(self, inputs):
+        return K.concatenate(inputs)
+
+    def compute_mask(self, inputs, mask=None):
+        return mask[0][0]
+
+    def compute_output_shape(self, input_shape):
+        out_shape = list(input_shape[0])
+        out_shape[-1] += input_shape[1][-1]
+        return tuple(out_shape)
+
+
 def TimeDistributedSequential(layers, inputs, name=None):
     layer_names = ["_".join(["td", layer.name]) for layer in layers]
 
@@ -367,7 +381,7 @@ def TimeDistributedSequential(layers, inputs, name=None):
 
 def _printModelSummary(model, name):
     # from keras.utils import plot_model
-    # plot_model(model, to_file='model.png')
+    # plot_model(model, to_file=(name if name else "model") + ".png")
 
     model_summary = ["Printing model summary"]
 
@@ -450,11 +464,14 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                                   mask_zero=True, name="W_y")(ref_input)
 
     qualvec_pre = multiply([out_state, W_y], name="pre_qevf")  # Pre-QEVF
-    qualvec_post = Lambda(
-        K.concatenate,
-        output_shape=lambda x: (x[0][0], x[0][1], x[0][2] + x[1][2]),
-        name="post_qevf"
-    )(decoder)  # Post-QEVF
+    qualvec_post = ConcatDecoder(name="post_qevf")(
+                        decoder
+                    )  # Post-QEVF
+    # Lambda(
+    #     K.concatenate,
+    #     output_shape=lambda x: (x[0][0], x[0][1], x[0][2] + x[1][2]),
+    #     name="post_qevf"
+    # )(decoder)  # Post-QEVF
 
     qualvec = concatenate([qualvec_pre, qualvec_post], name="qualvec")
 
