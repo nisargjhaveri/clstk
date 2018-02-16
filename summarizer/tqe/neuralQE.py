@@ -91,7 +91,7 @@ def _loadSentences(filePath, lower=True, tokenize=True):
     with open(filePath) as lines:
         sentences = map(_processLine, list(lines))
 
-    return np.array(sentences, dtype=object)
+    return np.array(sentences, dtype=object)[:20]
 
 
 def _loadPredictorData(fileBasename):
@@ -163,6 +163,7 @@ def _loadData(fileBasename, devFileSuffix=None):
 
 def _prepareInput(workspaceDir, modelName,
                   srcVocabTransformer, refVocabTransformer,
+                  max_len,
                   devFileSuffix=None, predictorDataModel=None):
     logger.info("Loading data")
 
@@ -200,11 +201,14 @@ def _prepareInput(workspaceDir, modelName,
     refPredictorTrain = refVocabTransformer.transform(pred_train['ref'])
 
     def getMaxLen(listOfsequences):
-        return max([max(map(len, sequences)) for sequences in listOfsequences])
+        return max([max(map(len, sequences)) for sequences in listOfsequences
+                    if len(sequences)])
 
-    srcMaxLen = getMaxLen([srcSentencesTrain, srcSentencesDev])
-    refMaxLen = getMaxLen([mtSentencesTrain, mtSentencesDev,
-                           refSentencesTrain, refSentencesDev])
+    srcMaxLen = min(getMaxLen([srcSentencesTrain, srcSentencesDev,
+                               srcPredictorTrain]), max_len)
+    refMaxLen = min(getMaxLen([mtSentencesTrain, mtSentencesDev,
+                               refSentencesTrain, refSentencesDev,
+                               refPredictorTrain]), max_len)
 
     X_train = {
         "src": pad_sequences(srcSentencesTrain, maxlen=srcMaxLen),
@@ -535,7 +539,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
 
 def train_model(workspaceDir, modelName, devFileSuffix,
-                batchSize, epochs, vocab_size, training_mode,
+                batchSize, epochs, max_len, vocab_size, training_mode,
                 predictor_model, predictor_data,
                 **kwargs):
     logger.info("initializing TQE training")
@@ -555,6 +559,7 @@ def train_model(workspaceDir, modelName, devFileSuffix,
                                         modelName,
                                         srcVocabTransformer,
                                         refVocabTransformer,
+                                        max_len=max_len,
                                         devFileSuffix=devFileSuffix,
                                         predictorDataModel=predictor_data
                                         )
@@ -678,6 +683,7 @@ def setupArgparse(parser):
                     batchSize=args.batch_size,
                     epochs=args.epochs,
                     vocab_size=args.vocab_size,
+                    max_len=args.max_len,
                     embedding_size=args.embedding_size,
                     gru_size=args.gru_size,
                     qualvec_size=args.qualvec_size,
@@ -698,6 +704,8 @@ def setupArgparse(parser):
                         help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=15,
                         help='Number of epochs to run')
+    parser.add_argument('--max-len', type=int, default=100,
+                        help='Maximum length of the sentences')
     parser.add_argument('-m', '--embedding-size', type=int, default=300,
                         help='Size of word embeddings')
     parser.add_argument('-n', '--gru-size', type=int, default=500,
