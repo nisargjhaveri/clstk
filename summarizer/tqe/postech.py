@@ -2,12 +2,9 @@ import os
 
 from . import utils
 
-import numpy as np
-from sklearn.model_selection import ShuffleSplit
-
 from keras.layers import Layer, multiply, concatenate
 from keras.layers import Input, Embedding, Dense, Reshape
-from keras.layers import RNN, GRU, GRUCell, TimeDistributed, Bidirectional
+from keras.layers import RNN, GRU, GRUCell, Bidirectional
 from keras.layers import MaxPooling1D
 from keras.models import Model
 from keras.callbacks import ModelCheckpoint
@@ -17,81 +14,12 @@ import keras.backend as K
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils.generic_utils import CustomObjectScope
 
-from collections import Counter
+from .common import WordIndexTransformer, _loadSentences, _loadData
+from .common import _printModelSummary, TimeDistributedSequential
 
 
 import logging
-logger = logging.getLogger("neuralQE")
-
-
-class WordIndexTransformer(object):
-    def __init__(self, vocab_size=None):
-        self.nextIndex = 1
-        self.vocabSize = vocab_size
-        self.vocabMap = {}
-        self.wordCounts = Counter()
-
-        self.finalized = False
-
-    def _getIndex(self, token):
-        return self.vocabMap.get(token, 0)
-
-    def fit(self, sentences):
-        if self.finalized:
-            raise ValueError("Cannot fit after the transformer is finalized")
-
-        for sentence in sentences:
-            self.wordCounts.update(sentence)
-
-        return self
-
-    def finalize(self):
-        if self.finalized:
-            return
-
-        for token, count in self.wordCounts.most_common():
-            if self.vocabSize is None or self.nextIndex <= self.vocabSize:
-                self.vocabMap[token] = self.nextIndex
-                self.nextIndex += 1
-
-        self.finalized = True
-
-        return self
-
-    def transform(self, sentences):
-        self.finalize()
-
-        transformedSentences = []
-        for sentence in sentences:
-            transformedSentences.append(
-                np.array([self._getIndex(token) for token in sentence]))
-
-        return np.array(transformedSentences)
-
-    def fit_transform(self, sentences):
-        self.fit(sentences)
-        return self.transform(sentences)
-
-    def vocab_size(self):
-        return self.nextIndex
-
-
-def _loadSentences(filePath, lower=True, tokenize=True):
-    def _processLine(line):
-        sentence = line.decode('utf-8').strip()
-
-        if lower:
-            sentence = sentence.lower()
-
-        if tokenize:
-            sentence = np.array(sentence.split(), dtype=object)
-
-        return sentence
-
-    with open(filePath) as lines:
-        sentences = map(_processLine, list(lines))
-
-    return np.array(sentences, dtype=object)
+logger = logging.getLogger("postech")
 
 
 def _loadPredictorData(fileBasename):
@@ -108,57 +36,6 @@ def _loadPredictorData(fileBasename):
         predictorData['ref'] = _loadSentences(refSentencesPath)
 
     return predictorData
-
-
-def _loadData(fileBasename, devFileSuffix=None):
-    targetPath = fileBasename + ".hter"
-    srcSentencesPath = fileBasename + ".src"
-    mtSentencesPath = fileBasename + ".mt"
-    refSentencesPath = fileBasename + ".ref"
-
-    srcSentences = _loadSentences(srcSentencesPath)
-    mtSentences = _loadSentences(mtSentencesPath)
-    refSentences = _loadSentences(refSentencesPath)
-
-    y = np.clip(np.loadtxt(targetPath), 0, 1)
-
-    if devFileSuffix:
-        splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
-        train_index, _ = splitter.split(srcSentences).next()
-
-        srcSentencesDev = _loadSentences(srcSentencesPath + devFileSuffix)
-        mtSentencesDev = _loadSentences(mtSentencesPath + devFileSuffix)
-        refSentencesDev = _loadSentences(refSentencesPath + devFileSuffix)
-
-        y_dev = np.clip(np.loadtxt(targetPath + devFileSuffix), 0, 1)
-    else:
-        splitter = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
-        train_index, dev_index = splitter.split(srcSentences).next()
-
-        srcSentencesDev = srcSentences[dev_index]
-        mtSentencesDev = mtSentences[dev_index]
-        refSentencesDev = refSentences[dev_index]
-
-        y_dev = y[dev_index]
-
-    srcSentencesTrain = srcSentences[train_index]
-    mtSentencesTrain = mtSentences[train_index]
-    refSentencesTrain = refSentences[train_index]
-
-    y_train = y[train_index]
-
-    X_train = {
-        "src": srcSentencesTrain,
-        "mt": mtSentencesTrain,
-        "ref": refSentencesTrain
-    }
-    X_dev = {
-        "src": srcSentencesDev,
-        "mt": mtSentencesDev,
-        "ref": refSentencesDev
-    }
-
-    return X_train, y_train, X_dev, y_dev
 
 
 def _prepareInput(workspaceDir, modelName,
@@ -368,37 +245,6 @@ class ConcatDecoder(Layer):
         return tuple(out_shape)
 
 
-def TimeDistributedSequential(layers, inputs, name=None):
-    layer_names = ["_".join(["td", layer.name]) for layer in layers]
-
-    if name:
-        layer_names[-1] = name
-
-    input = inputs
-    for layer, layer_name in zip(layers, layer_names):
-        input = TimeDistributed(
-                    layer, name=layer_name
-                )(input)
-
-    return input
-
-
-def _printModelSummary(model, name):
-    # from keras.utils import plot_model
-    # plot_model(model, to_file=(name if name else "model") + ".png")
-
-    model_summary = ["Printing model summary"]
-
-    if name:
-        model_summary += ["Model " + name]
-
-    def summary_capture(line):
-        model_summary.append(line)
-
-    model.summary(print_fn=summary_capture)
-    logger.info("\n".join(model_summary))
-
-
 def getModel(srcVocabTransformer, refVocabTransformer,
              embedding_size,
              gru_size,
@@ -497,7 +343,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "quality": ["mse", "mae"]
             }
         )
-    _printModelSummary(model_multitask, "model_multitask")
+    _printModelSummary(logger, model_multitask, "model_multitask")
 
     model_predictor = Model(inputs=[src_input, ref_input],
                             outputs=[predicted_word])
@@ -510,7 +356,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "predicted_word": ["sparse_categorical_accuracy"],
             }
         )
-    _printModelSummary(model_predictor, "model_predictor")
+    _printModelSummary(logger, model_predictor, "model_predictor")
 
     model_estimator = Model(inputs=[src_input, ref_input],
                             outputs=[quality])
@@ -533,7 +379,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
             }
         )
 
-    _printModelSummary(model_estimator, "model_estimator")
+    _printModelSummary(logger, model_estimator, "model_estimator")
 
     return model_multitask, model_predictor, model_estimator
 
