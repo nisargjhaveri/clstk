@@ -154,7 +154,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     quality_summary = Bidirectional(
                     GRU(gru_size),
                     name="estimator"
-            )(decoder[1])
+            )(decoder[0])
 
     quality = Dense(1, name="quality")(quality_summary)
 
@@ -170,13 +170,13 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "quality": ["mse", "mae"]
             }
         )
-    _printModelSummary(model, "model")
+    _printModelSummary(logger, model, "model")
 
     return model
 
 
 def train_model(workspaceDir, modelName, devFileSuffix,
-                batchSize, epochs, max_len, vocab_size, training_mode,
+                batchSize, epochs, max_len, vocab_size,
                 **kwargs):
     logger.info("initializing TQE training")
 
