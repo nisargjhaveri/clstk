@@ -16,6 +16,7 @@ from keras.utils.generic_utils import CustomObjectScope
 
 from .common import WordIndexTransformer, _loadSentences, _loadData
 from .common import _printModelSummary, TimeDistributedSequential
+from .common import pearsonr
 
 
 import logging
@@ -340,7 +341,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
             },
             metrics={
                 "predicted_word": ["sparse_categorical_accuracy"],
-                "quality": ["mse", "mae"]
+                "quality": ["mse", "mae", pearsonr]
             }
         )
     _printModelSummary(logger, model_multitask, "model_multitask")
@@ -375,7 +376,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "quality": "mse"
             },
             metrics={
-                "quality": ["mse", "mae"]
+                "quality": ["mse", "mae", pearsonr]
             }
         )
 

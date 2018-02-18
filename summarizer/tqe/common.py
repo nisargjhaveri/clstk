@@ -157,3 +157,51 @@ def _printModelSummary(logger, model, name, plot=False):
 
     model.summary(print_fn=summary_capture)
     logger.info("\n".join(model_summary))
+
+
+def pearsonr(y_true, y_pred):
+    # From https://github.com/scipy/scipy/blob/v0.14.0/scipy/stats/stats.py
+    #
+    # x = np.asarray(x)
+    # y = np.asarray(y)
+    # n = len(x)
+    # mx = x.mean()
+    # my = y.mean()
+    # xm, ym = x-mx, y-my
+    # r_num = np.add.reduce(xm * ym)
+    # r_den = np.sqrt(ss(xm) * ss(ym))
+    # r = r_num / r_den
+    #
+    # # Presumably, if abs(r) > 1, then it is only some small artifact of
+    # # floating point arithmetic.
+    # r = max(min(r, 1.0), -1.0)
+    # df = n-2
+    # if abs(r) == 1.0:
+    #     prob = 0.0
+    # else:
+    #     t_squared = r*r * (df / ((1.0 - r) * (1.0 + r)))
+    #     prob = betai(0.5*df, 0.5, df / (df + t_squared))
+    # return r, prob
+
+    import keras.backend as K
+
+    x = y_true
+    y = y_pred
+    # n = x.shape[0]
+    mx = K.mean(x)
+    my = K.mean(y)
+    xm, ym = x - mx, y - my
+    r_num = K.sum(xm * ym)
+    r_den = K.sqrt(K.sum(xm * xm) * K.sum(ym * ym))
+    r = r_num / r_den
+
+    # Presumably, if abs(r) > 1, then it is only some small artifact of
+    # floating point arithmetic.
+    r = K.clip(r, -1.0, 1.0)
+    # df = n-2
+    # if abs(r) == 1.0:
+    #     prob = 0.0
+    # else:
+    #     t_squared = r*r * (df / ((1.0 - r) * (1.0 + r)))
+    #     prob = betai(0.5*df, 0.5, df / (df + t_squared))
+    return r

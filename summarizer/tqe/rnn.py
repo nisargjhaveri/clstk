@@ -12,6 +12,7 @@ from keras.preprocessing.sequence import pad_sequences
 
 from .common import WordIndexTransformer, _loadData
 from .common import _printModelSummary
+from .common import pearsonr
 
 
 import logging
@@ -167,7 +168,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "quality": "mse"
             },
             metrics={
-                "quality": ["mse", "mae"]
+                "quality": ["mse", "mae", pearsonr]
             }
         )
     _printModelSummary(logger, model, "model")
