@@ -13,3 +13,5 @@ https://github.com/kpu/kenlm/archive/master.zip
 #keras
 https://github.com/nisargjhaveri/keras/archive/master.zip
 h5py
+
+https://github.com/facebookresearch/fastText/archive/master.zip

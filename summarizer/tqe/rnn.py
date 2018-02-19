@@ -13,6 +13,7 @@ from keras.preprocessing.sequence import pad_sequences
 from .common import WordIndexTransformer, _loadData
 from .common import _printModelSummary
 from .common import pearsonr
+from .common import get_fastText_embeddings
 
 
 import logging
@@ -116,11 +117,21 @@ class AttentionGRUCell(GRUCell):
 
 
 def getModel(srcVocabTransformer, refVocabTransformer,
-             embedding_size,
-             gru_size
+             embedding_size, gru_size,
+             ref_fastText,
              ):
     src_vocab_size = srcVocabTransformer.vocab_size()
     ref_vocab_size = refVocabTransformer.vocab_size()
+
+    ref_embedding_kwargs = {}
+
+    if ref_fastText:
+        logger.info("Loading fastText embeddings")
+        ref_embedding_kwargs['weights'] = [get_fastText_embeddings(
+                                ref_fastText,
+                                refVocabTransformer,
+                                embedding_size
+                                )]
 
     logger.info("Creating model")
 
@@ -137,7 +148,8 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                         output_dim=embedding_size,
                         input_dim=ref_vocab_size,
                         mask_zero=True,
-                        name="ref_embedding")(ref_input)
+                        name="ref_embedding",
+                        **ref_embedding_kwargs)(ref_input)
 
     encoder = Bidirectional(
                     GRU(gru_size, return_sequences=True, return_state=True),
@@ -193,6 +205,12 @@ def train_model(workspaceDir, modelName, devFileSuffix,
                                         devFileSuffix=devFileSuffix,
                                         )
 
+    if kwargs['ref_fastText']:
+        kwargs['ref_fastText'] = os.path.join(
+                            workspaceDir, "fastText",
+                            ".".join([kwargs['ref_fastText'], "bin"])
+                            )
+
     model = getModel(srcVocabTransformer, refVocabTransformer, **kwargs)
 
     logger.info("Training model")
@@ -235,6 +253,7 @@ def setupArgparse(parser):
                     max_len=args.max_len,
                     embedding_size=args.embedding_size,
                     gru_size=args.gru_size,
+                    ref_fastText=args.target_embeddings
                     )
 
     parser.add_argument('workspace_dir',
@@ -249,6 +268,8 @@ def setupArgparse(parser):
                         help='Number of epochs to run')
     parser.add_argument('--max-len', type=int, default=100,
                         help='Maximum length of the sentences')
+    parser.add_argument('--target-embeddings', type=str, default=None,
+                        help='fastText model name for target language')
     parser.add_argument('-m', '--embedding-size', type=int, default=300,
                         help='Size of word embeddings')
     parser.add_argument('-n', '--gru-size', type=int, default=500,

@@ -55,6 +55,9 @@ class WordIndexTransformer(object):
     def vocab_size(self):
         return self.nextIndex
 
+    def vocab_map(self):
+        return self.vocabMap
+
 
 def _loadSentences(filePath, lower=True, tokenize=True):
     def _processLine(line):
@@ -123,6 +126,20 @@ def _loadData(fileBasename, devFileSuffix=None):
     }
 
     return X_train, y_train, X_dev, y_dev
+
+
+def get_fastText_embeddings(fastText_file, vocabTransformer, embedding_size):
+    import fastText
+    ft_model = fastText.load_model(fastText_file)
+
+    embedding_matrix = np.zeros(
+                        shape=(vocabTransformer.vocab_size(), embedding_size)
+                    )
+
+    for token, i in vocabTransformer.vocab_map().items():
+        embedding_matrix[i] = ft_model.get_word_vector(token)
+
+    return embedding_matrix
 
 
 def TimeDistributedSequential(layers, inputs, name=None):
