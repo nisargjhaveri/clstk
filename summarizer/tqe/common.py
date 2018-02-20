@@ -77,7 +77,7 @@ def _loadSentences(filePath, lower=True, tokenize=True):
     return np.array(sentences, dtype=object)
 
 
-def _loadData(fileBasename, devFileSuffix=None):
+def _loadData(fileBasename, devFileSuffix=None, testFileSuffix=None):
     targetPath = fileBasename + ".hter"
     srcSentencesPath = fileBasename + ".src"
     mtSentencesPath = fileBasename + ".mt"
@@ -89,7 +89,11 @@ def _loadData(fileBasename, devFileSuffix=None):
 
     y = np.clip(np.loadtxt(targetPath), 0, 1)
 
-    if devFileSuffix:
+    if (testFileSuffix or devFileSuffix) and \
+            not (testFileSuffix and devFileSuffix):
+        raise ValueError("You have to specify both dev and test file suffix")
+
+    if devFileSuffix and testFileSuffix:
         splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
         train_index, _ = splitter.split(srcSentences).next()
 
@@ -97,16 +101,28 @@ def _loadData(fileBasename, devFileSuffix=None):
         mtSentencesDev = _loadSentences(mtSentencesPath + devFileSuffix)
         refSentencesDev = _loadSentences(refSentencesPath + devFileSuffix)
 
+        srcSentencesTest = _loadSentences(srcSentencesPath + testFileSuffix)
+        mtSentencesTest = _loadSentences(mtSentencesPath + testFileSuffix)
+        refSentencesTest = _loadSentences(refSentencesPath + testFileSuffix)
+
         y_dev = np.clip(np.loadtxt(targetPath + devFileSuffix), 0, 1)
+        y_test = np.clip(np.loadtxt(targetPath + testFileSuffix), 0, 1)
     else:
-        splitter = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
+        splitter = ShuffleSplit(n_splits=1, test_size=.2, random_state=42)
         train_index, dev_index = splitter.split(srcSentences).next()
 
-        srcSentencesDev = srcSentences[dev_index]
-        mtSentencesDev = mtSentences[dev_index]
-        refSentencesDev = refSentences[dev_index]
+        dev_len = len(dev_index) / 2
 
-        y_dev = y[dev_index]
+        srcSentencesDev = srcSentences[dev_index[:dev_len]]
+        mtSentencesDev = mtSentences[dev_index[:dev_len]]
+        refSentencesDev = refSentences[dev_index[:dev_len]]
+
+        srcSentencesTest = srcSentences[dev_index[dev_len:]]
+        mtSentencesTest = mtSentences[dev_index[dev_len:]]
+        refSentencesTest = refSentences[dev_index[dev_len:]]
+
+        y_dev = y[dev_index[:dev_len]]
+        y_test = y[dev_index[dev_len:]]
 
     srcSentencesTrain = srcSentences[train_index]
     mtSentencesTrain = mtSentences[train_index]
@@ -124,8 +140,13 @@ def _loadData(fileBasename, devFileSuffix=None):
         "mt": mtSentencesDev,
         "ref": refSentencesDev
     }
+    X_test = {
+        "src": srcSentencesTest,
+        "mt": mtSentencesTest,
+        "ref": refSentencesTest
+    }
 
-    return X_train, y_train, X_dev, y_dev
+    return X_train, y_train, X_dev, y_dev, X_test, y_test
 
 
 def get_fastText_embeddings(fastText_file, vocabTransformer, embedding_size):

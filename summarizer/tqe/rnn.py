@@ -23,32 +23,39 @@ logger = logging.getLogger("rnn")
 def _prepareInput(workspaceDir, modelName,
                   srcVocabTransformer, refVocabTransformer,
                   max_len,
-                  devFileSuffix=None, predictorDataModel=None):
+                  devFileSuffix=None, testFileSuffix=None,
+                  ):
     logger.info("Loading data")
 
-    X_train, y_train, X_dev, y_dev = _loadData(
+    X_train, y_train, X_dev, y_dev, X_test, y_test = _loadData(
                     os.path.join(workspaceDir, "tqe." + modelName),
-                    devFileSuffix
+                    devFileSuffix, testFileSuffix
                 )
 
     logger.info("Transforming sentences to onehot")
 
     srcVocabTransformer \
         .fit(X_train['src']) \
-        .fit(X_dev['src'])
+        .fit(X_dev['src']) \
+        .fit(X_test['src'])
 
     srcSentencesTrain = srcVocabTransformer.transform(X_train['src'])
     srcSentencesDev = srcVocabTransformer.transform(X_dev['src'])
+    srcSentencesTest = srcVocabTransformer.transform(X_test['src'])
 
     refVocabTransformer.fit(X_train['mt']) \
                        .fit(X_dev['mt']) \
+                       .fit(X_test['mt']) \
                        .fit(X_train['ref']) \
-                       .fit(X_dev['ref'])
+                       .fit(X_dev['ref']) \
+                       .fit(X_test['ref'])
 
     mtSentencesTrain = refVocabTransformer.transform(X_train['mt'])
     mtSentencesDev = refVocabTransformer.transform(X_dev['mt'])
+    mtSentencesTest = refVocabTransformer.transform(X_test['mt'])
     refSentencesTrain = refVocabTransformer.transform(X_train['ref'])
     refSentencesDev = refVocabTransformer.transform(X_dev['ref'])
+    refSentencesTest = refVocabTransformer.transform(X_test['ref'])
 
     def getMaxLen(listOfsequences):
         return max([max(map(len, sequences)) for sequences in listOfsequences
@@ -70,7 +77,13 @@ def _prepareInput(workspaceDir, modelName,
         "ref": pad_sequences(refSentencesDev, maxlen=refMaxLen)
     }
 
-    return X_train, y_train, X_dev, y_dev
+    X_test = {
+        "src": pad_sequences(srcSentencesTest, maxlen=srcMaxLen),
+        "mt": pad_sequences(mtSentencesTest, maxlen=refMaxLen),
+        "ref": pad_sequences(refSentencesTest, maxlen=refMaxLen)
+    }
+
+    return X_train, y_train, X_dev, y_dev, X_test, y_test
 
 
 class AttentionGRUCell(GRUCell):
@@ -198,7 +211,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     return model
 
 
-def train_model(workspaceDir, modelName, devFileSuffix,
+def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                 batchSize, epochs, max_len, vocab_size,
                 **kwargs):
     logger.info("initializing TQE training")
@@ -206,13 +219,14 @@ def train_model(workspaceDir, modelName, devFileSuffix,
     srcVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
     refVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
 
-    X_train, y_train, X_dev, y_dev = _prepareInput(
+    X_train, y_train, X_dev, y_dev, X_test, y_test = _prepareInput(
                                         workspaceDir,
                                         modelName,
                                         srcVocabTransformer,
                                         refVocabTransformer,
                                         max_len=max_len,
                                         devFileSuffix=devFileSuffix,
+                                        testFileSuffix=testFileSuffix,
                                         )
 
     def get_embedding_path(model):
@@ -248,11 +262,17 @@ def train_model(workspaceDir, modelName, devFileSuffix,
     # logger.info("Saving model")
     # model.save(fileBasename + "neural.model.h5")
 
-    logger.info("Evaluating")
+    logger.info("Evaluating on development data of size %d" % len(y_dev))
     utils.evaluate(model.predict([
         X_dev['src'],
         X_dev['mt']
     ]).reshape((-1,)), y_dev)
+
+    logger.info("Evaluating on test data of size %d" % len(y_test))
+    utils.evaluate(model.predict([
+        X_test['src'],
+        X_test['mt']
+    ]).reshape((-1,)), y_test)
 
 
 def setupArgparse(parser):
@@ -260,6 +280,7 @@ def setupArgparse(parser):
         train_model(args.workspace_dir,
                     args.model_name,
                     devFileSuffix=args.dev_file_suffix,
+                    testFileSuffix=args.test_file_suffix,
                     batchSize=args.batch_size,
                     epochs=args.epochs,
                     vocab_size=args.vocab_size,
@@ -275,6 +296,8 @@ def setupArgparse(parser):
     parser.add_argument('model_name',
                         help='Identifier for prepared files')
     parser.add_argument('--dev-file-suffix', type=str, default=None,
+                        help='Suffix for dev files')
+    parser.add_argument('--test-file-suffix', type=str, default=None,
                         help='Suffix for test files')
     parser.add_argument('-b', '--batch-size', type=int, default=50,
                         help='Batch size')
