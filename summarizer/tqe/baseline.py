@@ -28,16 +28,10 @@ import kenlm
 
 from ..utils.progress import ProgressBar
 
+from .common import _loadData
+
 import logging
 logger = logging.getLogger("baseline")
-
-
-def _loadSentences(filePath):
-    with open(filePath) as lines:
-        sentences = map(
-            lambda s: s.decode('utf-8').strip(), list(lines))
-
-    return np.array(sentences, dtype=object)
 
 
 def _normalizeSentences(sentences):
@@ -217,62 +211,39 @@ def _computeFeatures(srcSentences, mtSentences,
                 )
 
 
-def _prepareFeatures(fileBasename, devFileSuffix=None,
+def _prepareFeatures(fileBasename, devFileSuffix=None, testFileSuffix=None,
                      trainLM=True, trainNGrams=True, parseSentences=True):
     logger.info("Loading data for computing features")
-    targetPath = fileBasename + ".hter"
-    srcSentencesPath = fileBasename + ".src"
-    mtSentencesPath = fileBasename + ".mt"
-    refSentencesPath = fileBasename + ".ref"
 
     srcLMPath = fileBasename + ".src.lm.2.arpa"
     refLMPath = fileBasename + ".ref.lm.2.arpa"
     ngramPath = fileBasename + ".src.ngrams.pickle"
     srcParsePath = fileBasename + ".src.parse"
     devParsePath = fileBasename + ".src.dev.parse"
+    testParsePath = fileBasename + ".src.test.parse"
 
-    srcSentences = _loadSentences(srcSentencesPath)
-    mtSentences = _loadSentences(mtSentencesPath)
-    refSentences = _loadSentences(refSentencesPath)
-
-    y = np.clip(np.loadtxt(targetPath), 0, 1)
-
-    if devFileSuffix:
-        splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
-        train_index, _ = splitter.split(srcSentences).next()
-
-        srcSentencesDev = _loadSentences(srcSentencesPath + devFileSuffix)
-        mtSentencesDev = _loadSentences(mtSentencesPath + devFileSuffix)
-
-        y_dev = np.clip(np.loadtxt(targetPath + devFileSuffix), 0, 1)
-    else:
-        splitter = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
-        train_index, dev_index = splitter.split(srcSentences).next()
-
-        srcSentencesDev = srcSentences[dev_index]
-        mtSentencesDev = mtSentences[dev_index]
-
-        y_dev = y[dev_index]
-
-    srcSentencesTrain = srcSentences[train_index]
-    mtSentencesTrain = mtSentences[train_index]
-    refSentencesTrain = refSentences[train_index]
-
-    y_train = y[train_index]
+    X_train, y_train, X_dev, y_dev, X_test, y_test = _loadData(
+                            fileBasename,
+                            devFileSuffix=devFileSuffix,
+                            testFileSuffix=testFileSuffix,
+                            lower=False,
+                            tokenize=False,
+                        )
 
     if trainLM:
         logger.info("Training language models")
-        _trainLM(srcSentencesTrain, srcLMPath, 2)
-        _trainLM(refSentencesTrain, refLMPath, 2)
+        _trainLM(X_train['src'], srcLMPath, 2)
+        _trainLM(X_train['ref'], refLMPath, 2)
 
     if trainNGrams:
         logger.info("Computing ngram frequencies")
-        _fitNGramCounts(srcSentencesTrain, ngramPath)
+        _fitNGramCounts(X_train['src'], ngramPath)
 
     if parseSentences:
         logger.info("Parsing sentences")
-        _parseSentences(srcSentencesTrain, srcParsePath)
-        _parseSentences(srcSentencesDev, devParsePath)
+        _parseSentences(X_train['src'], srcParsePath)
+        _parseSentences(X_dev['src'], devParsePath)
+        _parseSentences(X_test['src'], testParsePath)
 
     # posCounts = CountVectorizer(
     #     lowercase=False,
@@ -294,17 +265,22 @@ def _prepareFeatures(fileBasename, devFileSuffix=None,
                      high2grams, low2grams,
                      high3grams, low3grams)
 
-    X_train = _computeFeatures(srcSentencesTrain, mtSentencesTrain,
+    X_train = _computeFeatures(X_train['src'], X_train['mt'],
                                srcLModel, refLModel, highLowNGrams,
                                srcParsePath)
 
-    X_dev = _computeFeatures(srcSentencesDev, mtSentencesDev,
-                             srcLModel, refLModel, highLowNGrams, devParsePath)
+    X_dev = _computeFeatures(X_dev['src'], X_dev['mt'],
+                             srcLModel, refLModel, highLowNGrams,
+                             devParsePath)
 
-    return X_train, y_train, X_dev, y_dev
+    X_test = _computeFeatures(X_test['src'], X_test['mt'],
+                              srcLModel, refLModel, highLowNGrams,
+                              testParsePath)
+
+    return X_train, y_train, X_dev, y_dev, X_test, y_test
 
 
-def _getFeaturesFromFile(fileBasename, devFileSuffix=None,
+def _getFeaturesFromFile(fileBasename, devFileSuffix=None, testFileSuffix=None,
                          featureFileSuffix=None):
     logger.info("Loading features from file")
     targetPath = fileBasename + ".hter"
@@ -312,23 +288,35 @@ def _getFeaturesFromFile(fileBasename, devFileSuffix=None,
     y = np.clip(np.loadtxt(targetPath), 0, 1)
     X = np.loadtxt(fileBasename + featureFileSuffix)
 
-    if devFileSuffix:
+    if (testFileSuffix or devFileSuffix) and \
+            not (testFileSuffix and devFileSuffix):
+        raise ValueError("You have to specify both dev and test file suffix")
+
+    if devFileSuffix and testFileSuffix:
         splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
         train_index, _ = splitter.split(y).next()
 
         X_dev = np.loadtxt(fileBasename + featureFileSuffix + devFileSuffix)
         y_dev = np.clip(np.loadtxt(targetPath + devFileSuffix), 0, 1)
+
+        X_test = np.loadtxt(fileBasename + featureFileSuffix + testFileSuffix)
+        y_test = np.clip(np.loadtxt(targetPath + testFileSuffix), 0, 1)
     else:
-        splitter = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
+        splitter = ShuffleSplit(n_splits=1, test_size=.2, random_state=42)
         train_index, dev_index = splitter.split(y).next()
 
-        X_dev = X[dev_index]
-        y_dev = y[dev_index]
+        dev_len = len(dev_index) / 2
+
+        X_dev = X[dev_index[:dev_len]]
+        y_dev = y[dev_index[:dev_len]]
+
+        X_test = X[dev_index[dev_len:]]
+        y_test = y[dev_index[dev_len:]]
 
     X_train = X[train_index]
     y_train = y[train_index]
 
-    return X_train, y_train, X_dev, y_dev
+    return X_train, y_train, X_dev, y_dev, X_test, y_test
 
 
 # def plotData(X, y, svr):
@@ -362,7 +350,7 @@ def _fitAndEval(svr, params, X_train, y_train, X_dev, y_dev, verbose=False):
     if verbose:
         _printResult([result])
 
-    return result
+    return result, svr
 
 
 def _printResult(results, printHeader=False):
@@ -385,7 +373,8 @@ def _printResult(results, printHeader=False):
         )
 
 
-def train_model(workspaceDir, modelName, devFileSuffix=None,
+def train_model(workspaceDir, modelName,
+                devFileSuffix=None, testFileSuffix=None,
                 featureFileSuffix=None, normalize=False, tune=False,
                 trainLM=True, trainNGrams=True, parseSentences=True,
                 maxJobs=-1):
@@ -393,15 +382,17 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
     if featureFileSuffix:
-        X_train, y_train, X_dev, y_dev = _getFeaturesFromFile(
+        X_train, y_train, X_dev, y_dev, X_test, y_test = _getFeaturesFromFile(
                                             fileBasename,
                                             devFileSuffix=devFileSuffix,
+                                            testFileSuffix=testFileSuffix,
                                             featureFileSuffix=featureFileSuffix
                                             )
     else:
-        X_train, y_train, X_dev, y_dev = _prepareFeatures(
+        X_train, y_train, X_dev, y_dev, X_test, y_test = _prepareFeatures(
                                             fileBasename,
                                             devFileSuffix=devFileSuffix,
+                                            testFileSuffix=testFileSuffix,
                                             trainLM=trainLM,
                                             trainNGrams=trainNGrams,
                                             parseSentences=parseSentences
@@ -435,12 +426,26 @@ def train_model(workspaceDir, modelName, devFileSuffix=None,
 
     results = Parallel(n_jobs=maxJobs, verbose=10)(
         delayed(_fitAndEval)(
-            clone(svr), params, X_train, y_train, X_dev, y_dev
+            clone(svr), params, X_train, y_train, X_dev, y_dev, True
         ) for params in ParameterGrid(parameters)
     )
 
+    results, clfs = zip(*results)
+
     logger.info("Printnig results")
     _printResult(results, True)
+
+    # Get best params and fit on again
+    values = np.array([result[1]['MSE'] for result in results])
+    best_index = np.argmax(values)
+
+    logger.info("Evaluating on development data of size %d" % len(y_dev))
+    utils.evaluate(clfs[best_index].predict(X_dev),
+                   y_dev)
+
+    logger.info("Evaluating on test data of size %d" % len(y_test))
+    utils.evaluate(clfs[best_index].predict(X_test),
+                   y_test)
 
     # plotData(X_train, y_train, svr)
 
@@ -450,6 +455,7 @@ def setupArgparse(parser):
         train_model(args.workspace_dir,
                     args.model_name,
                     devFileSuffix=args.dev_file_suffix,
+                    testFileSuffix=args.test_file_suffix,
                     featureFileSuffix=args.feature_file_suffix,
                     normalize=args.normalize,
                     tune=args.tune,
@@ -464,6 +470,8 @@ def setupArgparse(parser):
                         help='Identifier for prepared files used with ' +
                         'preparation')
     parser.add_argument('--dev-file-suffix', type=str, default=None,
+                        help='Suffix for dev files')
+    parser.add_argument('--test-file-suffix', type=str, default=None,
                         help='Suffix for test files')
     parser.add_argument('--feature-file-suffix', type=str, default=None,
                         help='Suffix for feature files')

@@ -77,15 +77,16 @@ def _loadSentences(filePath, lower=True, tokenize=True):
     return np.array(sentences, dtype=object)
 
 
-def _loadData(fileBasename, devFileSuffix=None, testFileSuffix=None):
+def _loadData(fileBasename, devFileSuffix=None, testFileSuffix=None,
+              lower=True, tokenize=True):
     targetPath = fileBasename + ".hter"
     srcSentencesPath = fileBasename + ".src"
     mtSentencesPath = fileBasename + ".mt"
     refSentencesPath = fileBasename + ".ref"
 
-    srcSentences = _loadSentences(srcSentencesPath)
-    mtSentences = _loadSentences(mtSentencesPath)
-    refSentences = _loadSentences(refSentencesPath)
+    srcSentences = _loadSentences(srcSentencesPath, lower, tokenize)
+    mtSentences = _loadSentences(mtSentencesPath, lower, tokenize)
+    refSentences = _loadSentences(refSentencesPath, lower, tokenize)
 
     y = np.clip(np.loadtxt(targetPath), 0, 1)
 
@@ -97,13 +98,19 @@ def _loadData(fileBasename, devFileSuffix=None, testFileSuffix=None):
         splitter = ShuffleSplit(n_splits=1, test_size=0, random_state=42)
         train_index, _ = splitter.split(srcSentences).next()
 
-        srcSentencesDev = _loadSentences(srcSentencesPath + devFileSuffix)
-        mtSentencesDev = _loadSentences(mtSentencesPath + devFileSuffix)
-        refSentencesDev = _loadSentences(refSentencesPath + devFileSuffix)
+        srcSentencesDev = _loadSentences(srcSentencesPath + devFileSuffix,
+                                         lower, tokenize)
+        mtSentencesDev = _loadSentences(mtSentencesPath + devFileSuffix,
+                                        lower, tokenize)
+        refSentencesDev = _loadSentences(refSentencesPath + devFileSuffix,
+                                         lower, tokenize)
 
-        srcSentencesTest = _loadSentences(srcSentencesPath + testFileSuffix)
-        mtSentencesTest = _loadSentences(mtSentencesPath + testFileSuffix)
-        refSentencesTest = _loadSentences(refSentencesPath + testFileSuffix)
+        srcSentencesTest = _loadSentences(srcSentencesPath + testFileSuffix,
+                                          lower, tokenize)
+        mtSentencesTest = _loadSentences(mtSentencesPath + testFileSuffix,
+                                         lower, tokenize)
+        refSentencesTest = _loadSentences(refSentencesPath + testFileSuffix,
+                                          lower, tokenize)
 
         y_dev = np.clip(np.loadtxt(targetPath + devFileSuffix), 0, 1)
         y_test = np.clip(np.loadtxt(targetPath + testFileSuffix), 0, 1)
