@@ -5,6 +5,7 @@ from . import utils
 from keras.layers import Input, Embedding, Dense
 from keras.layers import GRU, GRUCell, Bidirectional
 from keras.models import Model
+from keras.callbacks import EarlyStopping
 
 import keras.backend as K
 
@@ -256,6 +257,9 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                 y_dev
             ]
         ),
+        callbacks=[
+            EarlyStopping(monitor="val_pearsonr", patience=2, mode="max"),
+        ],
         verbose=2
     )
 
