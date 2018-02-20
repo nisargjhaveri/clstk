@@ -185,7 +185,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     model = Model(inputs=[src_input, ref_input],
                   outputs=[quality])
     model.compile(
-            optimizer="adagrad",
+            optimizer="adadelta",
             loss={
                 "quality": "mse"
             },

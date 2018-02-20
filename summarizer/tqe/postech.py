@@ -334,7 +334,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     model_multitask = Model(inputs=[src_input, ref_input],
                             outputs=[predicted_word, quality])
     model_multitask.compile(
-            optimizer="adagrad",
+            optimizer="adadelta",
             loss={
                 "predicted_word": "sparse_categorical_crossentropy",
                 "quality": "mse"
@@ -349,7 +349,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     model_predictor = Model(inputs=[src_input, ref_input],
                             outputs=[predicted_word])
     model_predictor.compile(
-            optimizer="adagrad",
+            optimizer="adadelta",
             loss={
                 "predicted_word": "sparse_categorical_crossentropy",
             },
@@ -371,7 +371,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     model_estimator.get_layer('td_t_out').trainable = False
 
     model_estimator.compile(
-            optimizer="adagrad",
+            optimizer="adadelta",
             loss={
                 "quality": "mse"
             },
