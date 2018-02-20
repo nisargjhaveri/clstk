@@ -436,7 +436,7 @@ def train_model(workspaceDir, modelName,
     _printResult(results, True)
 
     # Get best params and fit on again
-    values = np.array([result[1]['PCC'] for result in results])
+    values = np.array([result[1]['pearsonR'][0] for result in results])
     best_index = np.argmax(values)
 
     logger.info("Evaluating on development data of size %d" % len(y_dev))
