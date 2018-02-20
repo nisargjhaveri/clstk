@@ -437,7 +437,7 @@ def train_model(workspaceDir, modelName,
 
     # Get best params and fit on again
     values = np.array([result[1]['MSE'] for result in results])
-    best_index = np.argmax(values)
+    best_index = np.argmin(values)
 
     logger.info("Evaluating on development data of size %d" % len(y_dev))
     utils.evaluate(clfs[best_index].predict(X_dev),
