@@ -48,7 +48,7 @@ def _prepareInput(workspaceDir, modelName,
 
     X_train, y_train, X_dev, y_dev, X_test, y_test = _loadData(
                     os.path.join(workspaceDir, "tqe." + modelName),
-                    devFileSuffix
+                    devFileSuffix, testFileSuffix
                 )
 
     pred_train = _loadPredictorData(
