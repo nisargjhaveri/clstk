@@ -3,16 +3,17 @@ import os
 from . import utils
 
 from keras.layers import Input, Embedding, Dense
-from keras.layers import GRU, GRUCell, Bidirectional
+from keras.layers import GRU, GRUCell, Bidirectional, RNN
 from keras.models import Model
 from keras.callbacks import EarlyStopping
 
 import keras.backend as K
 
 from keras.preprocessing.sequence import pad_sequences
+from keras.utils.generic_utils import CustomObjectScope
 
 from .common import WordIndexTransformer, _loadData
-from .common import _printModelSummary
+from .common import _printModelSummary, TimeDistributedSequential
 from .common import pearsonr
 from .common import get_fastText_embeddings
 
@@ -133,6 +134,7 @@ class AttentionGRUCell(GRUCell):
 def getModel(srcVocabTransformer, refVocabTransformer,
              embedding_size, gru_size,
              src_fastText, ref_fastText,
+             attention,
              ):
     src_vocab_size = srcVocabTransformer.vocab_size()
     ref_vocab_size = refVocabTransformer.vocab_size()
@@ -180,13 +182,30 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                     name="encoder"
             )(src_embedding)
 
-    decoder = Bidirectional(
+    if attention:
+        attention_states = TimeDistributedSequential(
+                                [Dense(gru_size, name="attention_state")],
+                                encoder[0]
+                            )
+
+        with CustomObjectScope({'AttentionGRUCell': AttentionGRUCell}):
+            decoder = Bidirectional(
+                        RNN(AttentionGRUCell(gru_size),
+                            return_sequences=True, return_state=True),
+                        name="decoder"
+                    )(
+                      ref_embedding,
+                      constants=attention_states,
+                      initial_state=encoder[1:]
+                    )
+    else:
+        decoder = Bidirectional(
                     GRU(gru_size, return_sequences=True, return_state=True),
                     name="decoder"
-            )(
-              ref_embedding,
-              initial_state=encoder[1:]
-            )
+                )(
+                  ref_embedding,
+                  initial_state=encoder[1:]
+                )
 
     quality_summary = Bidirectional(
                     GRU(gru_size),
@@ -293,6 +312,7 @@ def setupArgparse(parser):
                     gru_size=args.gru_size,
                     src_fastText=args.source_embeddings,
                     ref_fastText=args.target_embeddings,
+                    attention=args.with_attention
                     )
 
     parser.add_argument('workspace_dir',
@@ -318,5 +338,7 @@ def setupArgparse(parser):
     parser.add_argument('-n', '--gru-size', type=int, default=500,
                         help='Size of GRU')
     parser.add_argument('-v', '--vocab-size', type=int, default=40000,
+                        help='Maximum vocab size')
+    parser.add_argument('--with-attention', action="store_true",
                         help='Maximum vocab size')
     parser.set_defaults(func=run)
