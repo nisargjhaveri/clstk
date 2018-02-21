@@ -481,7 +481,8 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                 ]
             ),
             callbacks=[
-                EarlyStopping(monitor="val_pearsonr", patience=2, mode="max"),
+                EarlyStopping(monitor="val_quality_pearsonr", patience=2,
+                              mode="max"),
             ],
             verbose=2
         )
