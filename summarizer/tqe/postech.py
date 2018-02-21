@@ -8,6 +8,7 @@ from keras.layers import RNN, GRU, GRUCell, Bidirectional
 from keras.layers import MaxPooling1D
 from keras.models import Model
 from keras.callbacks import ModelCheckpoint
+from keras.callbacks import EarlyStopping
 
 import keras.backend as K
 
@@ -479,6 +480,9 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                     y_dev
                 ]
             ),
+            callbacks=[
+                EarlyStopping(monitor="val_pearsonr", patience=2, mode="max"),
+            ],
             verbose=2
         )
 
