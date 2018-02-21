@@ -2,7 +2,8 @@ import os
 
 from . import utils
 
-from keras.layers import Input, Embedding, Dense
+from keras.layers import dot
+from keras.layers import Input, Embedding, Dense, Activation, Lambda
 from keras.layers import GRU, GRUCell, Bidirectional, RNN
 from keras.models import Model
 from keras.callbacks import EarlyStopping
@@ -134,7 +135,7 @@ class AttentionGRUCell(GRUCell):
 def getModel(srcVocabTransformer, refVocabTransformer,
              embedding_size, gru_size,
              src_fastText, ref_fastText,
-             attention,
+             attention, summary_attention, use_estimator
              ):
     src_vocab_size = srcVocabTransformer.vocab_size()
     ref_vocab_size = refVocabTransformer.vocab_size()
@@ -207,10 +208,39 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                   initial_state=encoder[1:]
                 )
 
-    quality_summary = Bidirectional(
-                    GRU(gru_size),
+    if use_estimator:
+        decoder = Bidirectional(
+                    GRU(gru_size,
+                        return_sequences=summary_attention,
+                        return_state=summary_attention),
                     name="estimator"
-            )(decoder[0])
+                )(decoder[0])
+
+    if summary_attention:
+        attention_weights = TimeDistributedSequential([
+            Dense(gru_size, activation="tanh"),
+            Dense(1, name="attention_weights"),
+        ], decoder[0])
+
+        # attention_weights = Reshape((-1,))(attention_weights)
+        attention_weights = Lambda(
+                    lambda x: K.reshape(x, (x.shape[0], -1,)),
+                    output_shape=lambda input_shape: input_shape[:-1],
+                    mask=lambda inputs, mask: mask,
+                    name="reshape"
+                    )(attention_weights)
+
+        attention_weights = Activation(
+                                "softmax",
+                                name="attention_softmax"
+                            )(attention_weights)
+
+        quality_summary = dot([attention_weights, decoder[0]],
+                              axes=(1, 1),
+                              name="summary"
+                              )
+    else:
+        quality_summary = decoder
 
     quality = Dense(1, name="quality")(quality_summary)
 
@@ -312,7 +342,9 @@ def setupArgparse(parser):
                     gru_size=args.gru_size,
                     src_fastText=args.source_embeddings,
                     ref_fastText=args.target_embeddings,
-                    attention=args.with_attention
+                    attention=args.with_attention,
+                    summary_attention=args.summary_attention,
+                    use_estimator=(not args.no_estimator),
                     )
 
     parser.add_argument('workspace_dir',
@@ -340,5 +372,9 @@ def setupArgparse(parser):
     parser.add_argument('-v', '--vocab-size', type=int, default=40000,
                         help='Maximum vocab size')
     parser.add_argument('--with-attention', action="store_true",
-                        help='Maximum vocab size')
+                        help='Add attention in decoder')
+    parser.add_argument('--summary-attention', action="store_true",
+                        help='Get quality summary using attention')
+    parser.add_argument('--no-estimator', action="store_true",
+                        help='Don\'t use separate estimator layer')
     parser.set_defaults(func=run)
