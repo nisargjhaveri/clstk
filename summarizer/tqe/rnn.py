@@ -201,7 +201,9 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                     )
     else:
         decoder = Bidirectional(
-                    GRU(gru_size, return_sequences=True, return_state=True),
+                    GRU(gru_size,
+                        return_sequences=(use_estimator or summary_attention),
+                        return_state=(use_estimator or summary_attention)),
                     name="decoder"
                 )(
                   ref_embedding,
