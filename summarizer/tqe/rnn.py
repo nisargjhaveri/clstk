@@ -406,7 +406,7 @@ def setupArgparse(parser):
                         help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=25,
                         help='Number of epochs to run')
-    parser.add_argument('--ensemble-count', type=int, default=5,
+    parser.add_argument('--ensemble-count', type=int, default=3,
                         help='Number of models to ensemble')
     parser.add_argument('--max-len', type=int, default=100,
                         help='Maximum length of the sentences')
