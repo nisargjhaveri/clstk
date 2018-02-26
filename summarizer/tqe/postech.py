@@ -2,7 +2,7 @@ import os
 
 from . import utils
 
-from keras.layers import Layer, multiply, concatenate
+from keras.layers import Layer, multiply, concatenate, average
 from keras.layers import Input, Embedding, Dense, Reshape
 from keras.layers import RNN, GRU, GRUCell, Bidirectional
 from keras.layers import MaxPooling1D
@@ -265,14 +265,20 @@ def getModel(srcVocabTransformer, refVocabTransformer,
              gru_size,
              qualvec_size,
              maxout_size,
-             maxout_units):
+             maxout_units,
+             model_inputs=None, verbose=False,
+             ):
     src_vocab_size = srcVocabTransformer.vocab_size()
     ref_vocab_size = refVocabTransformer.vocab_size()
 
-    logger.info("Creating model")
+    if verbose:
+        logger.info("Creating model")
 
-    src_input = Input(shape=(None, ))
-    ref_input = Input(shape=(None, ))
+    if model_inputs:
+        src_input, ref_input = model_inputs
+    else:
+        src_input = Input(shape=(None, ))
+        ref_input = Input(shape=(None, ))
 
     src_embedding = Embedding(
                         output_dim=embedding_size,
@@ -344,7 +350,6 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
     quality = Dense(1, name="quality")(quality_summary)
 
-    logger.info("Compiling model")
     model_multitask = Model(inputs=[src_input, ref_input],
                             outputs=[predicted_word, quality])
     model_multitask.compile(
@@ -358,7 +363,8 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "quality": ["mse", "mae", pearsonr]
             }
         )
-    _printModelSummary(logger, model_multitask, "model_multitask")
+    if verbose:
+        _printModelSummary(logger, model_multitask, "model_multitask")
 
     model_predictor = Model(inputs=[src_input, ref_input],
                             outputs=[predicted_word])
@@ -371,7 +377,8 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "predicted_word": ["sparse_categorical_accuracy"],
             }
         )
-    _printModelSummary(logger, model_predictor, "model_predictor")
+    if verbose:
+        _printModelSummary(logger, model_predictor, "model_predictor")
 
     model_estimator = Model(inputs=[src_input, ref_input],
                             outputs=[quality])
@@ -393,8 +400,81 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "quality": ["mse", "mae", pearsonr]
             }
         )
+    if verbose:
+        _printModelSummary(logger, model_estimator, "model_estimator")
 
-    _printModelSummary(logger, model_estimator, "model_estimator")
+    return model_multitask, model_predictor, model_estimator
+
+
+def getEnsembledModel(ensemble_count, **kwargs):
+    if ensemble_count == 1:
+        return getModel(verbose=True, **kwargs)
+
+    src_input = Input(shape=(None, ))
+    ref_input = Input(shape=(None, ))
+
+    model_inputs = [src_input, ref_input]
+
+    logger.info("Creating models to ensemble")
+    verbose = [True] + [False] * (ensemble_count - 1)
+    models = [getModel(model_inputs=model_inputs, verbose=v, **kwargs)
+              for _, v in zip(range(ensemble_count), verbose)]
+
+    models_multitask, models_predictor, models_estimator = zip(*models)
+
+    multitask_outputs = [model([src_input, ref_input])
+                         for model in models_multitask]
+
+    predicted_words, qualities = zip(*multitask_outputs)
+    predicted_word = average(list(predicted_words), name='predicted_word')
+    quality = average(list(qualities), name='quality')
+
+    predictor_output = average([model([src_input, ref_input])
+                                for model in models_predictor],
+                               name='predicted_word')
+
+    estimator_output = average([model([src_input, ref_input])
+                                for model in models_estimator],
+                               name='quality')
+
+    logger.info("Compiling ensembled models")
+    model_multitask = Model(inputs=[src_input, ref_input],
+                            outputs=[predicted_word, quality])
+    model_multitask.compile(
+            optimizer="adadelta",
+            loss={
+                "predicted_word": "sparse_categorical_crossentropy",
+                "quality": "mse"
+            },
+            metrics={
+                "predicted_word": ["sparse_categorical_accuracy"],
+                "quality": ["mse", "mae", pearsonr]
+            }
+        )
+
+    model_predictor = Model(inputs=[src_input, ref_input],
+                            outputs=predictor_output)
+    model_predictor.compile(
+            optimizer="adadelta",
+            loss={
+                "predicted_word": "sparse_categorical_crossentropy",
+            },
+            metrics={
+                "predicted_word": ["sparse_categorical_accuracy"],
+            }
+        )
+
+    model_estimator = Model(inputs=[src_input, ref_input],
+                            outputs=estimator_output)
+    model_estimator.compile(
+            optimizer="adadelta",
+            loss={
+                "quality": "mse"
+            },
+            metrics={
+                "quality": ["mse", "mae", pearsonr]
+            }
+        )
 
     return model_multitask, model_predictor, model_estimator
 
@@ -427,7 +507,9 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                                         )
 
     model_multitask, model_predictor, model_estimator = \
-        getModel(srcVocabTransformer, refVocabTransformer, **kwargs)
+        getEnsembledModel(srcVocabTransformer=srcVocabTransformer,
+                          refVocabTransformer=refVocabTransformer,
+                          **kwargs)
 
     if predictorModelFile and not pred_train:
         logger.info("Loading weights for predictor")
@@ -555,6 +637,7 @@ def setupArgparse(parser):
                     testFileSuffix=args.test_file_suffix,
                     batchSize=args.batch_size,
                     epochs=args.epochs,
+                    ensemble_count=args.ensemble_count,
                     vocab_size=args.vocab_size,
                     max_len=args.max_len,
                     embedding_size=args.embedding_size,
@@ -577,8 +660,10 @@ def setupArgparse(parser):
                         help='Suffix for test files')
     parser.add_argument('-b', '--batch-size', type=int, default=50,
                         help='Batch size')
-    parser.add_argument('-e', '--epochs', type=int, default=15,
+    parser.add_argument('-e', '--epochs', type=int, default=25,
                         help='Number of epochs to run')
+    parser.add_argument('--ensemble-count', type=int, default=3,
+                        help='Number of models to ensemble')
     parser.add_argument('--max-len', type=int, default=100,
                         help='Maximum length of the sentences')
     parser.add_argument('-m', '--embedding-size', type=int, default=300,
