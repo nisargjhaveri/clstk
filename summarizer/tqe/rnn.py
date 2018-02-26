@@ -404,7 +404,7 @@ def setupArgparse(parser):
                         help='Suffix for test files')
     parser.add_argument('-b', '--batch-size', type=int, default=50,
                         help='Batch size')
-    parser.add_argument('-e', '--epochs', type=int, default=15,
+    parser.add_argument('-e', '--epochs', type=int, default=25,
                         help='Number of epochs to run')
     parser.add_argument('--ensemble-count', type=int, default=5,
                         help='Number of models to ensemble')
