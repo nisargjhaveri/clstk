@@ -2,7 +2,7 @@ import os
 
 from . import utils
 
-from keras.layers import dot
+from keras.layers import dot, average
 from keras.layers import Input, Embedding, Dense, Activation, Lambda
 from keras.layers import GRU, GRUCell, Bidirectional, RNN
 from keras.models import Model
@@ -135,7 +135,8 @@ class AttentionGRUCell(GRUCell):
 def getModel(srcVocabTransformer, refVocabTransformer,
              embedding_size, gru_size,
              src_fastText, ref_fastText,
-             attention, summary_attention, use_estimator
+             attention, summary_attention, use_estimator,
+             model_inputs=None, verbose=False,
              ):
     src_vocab_size = srcVocabTransformer.vocab_size()
     ref_vocab_size = refVocabTransformer.vocab_size()
@@ -159,10 +160,14 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                                 embedding_size
                                 )]
 
-    logger.info("Creating model")
+    if verbose:
+        logger.info("Creating model")
 
-    src_input = Input(shape=(None, ))
-    ref_input = Input(shape=(None, ))
+    if model_inputs:
+        src_input, ref_input = model_inputs
+    else:
+        src_input = Input(shape=(None, ))
+        ref_input = Input(shape=(None, ))
 
     src_embedding = Embedding(
                         output_dim=embedding_size,
@@ -246,7 +251,8 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
     quality = Dense(1, name="quality")(quality_summary)
 
-    logger.info("Compiling model")
+    if verbose:
+        logger.info("Compiling model")
     model = Model(inputs=[src_input, ref_input],
                   outputs=[quality])
     model.compile(
@@ -258,7 +264,43 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                 "quality": ["mse", "mae", pearsonr]
             }
         )
-    _printModelSummary(logger, model, "model")
+    if verbose:
+        _printModelSummary(logger, model, "model")
+
+    return model
+
+
+def getEnsembledModel(ensemble_count, **kwargs):
+    if ensemble_count == 1:
+        return getModel(verbose=True, **kwargs)
+
+    src_input = Input(shape=(None, ))
+    ref_input = Input(shape=(None, ))
+
+    model_inputs = [src_input, ref_input]
+
+    logger.info("Creating models to ensemble")
+    models = [getModel(model_inputs=model_inputs, **kwargs)
+              for _ in range(ensemble_count)]
+    _printModelSummary(logger, models[0], "base_model")
+
+    output = average([model([src_input, ref_input]) for model in models],
+                     name='quality')
+
+    logger.info("Compiling ensembled model")
+    model = Model(inputs=[src_input, ref_input],
+                  outputs=output)
+
+    model.compile(
+            optimizer="adadelta",
+            loss={
+                "quality": "mse"
+            },
+            metrics={
+                "quality": ["mse", "mae", pearsonr]
+            }
+        )
+    _printModelSummary(logger, model, "ensembled_model")
 
     return model
 
@@ -290,7 +332,9 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
     kwargs['src_fastText'] = get_embedding_path(kwargs['src_fastText'])
     kwargs['ref_fastText'] = get_embedding_path(kwargs['ref_fastText'])
 
-    model = getModel(srcVocabTransformer, refVocabTransformer, **kwargs)
+    model = getEnsembledModel(srcVocabTransformer=srcVocabTransformer,
+                              refVocabTransformer=refVocabTransformer,
+                              **kwargs)
 
     logger.info("Training model")
     model.fit([
@@ -338,6 +382,7 @@ def setupArgparse(parser):
                     testFileSuffix=args.test_file_suffix,
                     batchSize=args.batch_size,
                     epochs=args.epochs,
+                    ensemble_count=args.ensemble_count,
                     vocab_size=args.vocab_size,
                     max_len=args.max_len,
                     embedding_size=args.embedding_size,
@@ -361,6 +406,8 @@ def setupArgparse(parser):
                         help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=15,
                         help='Number of epochs to run')
+    parser.add_argument('--ensemble-count', type=int, default=5,
+                        help='Number of models to ensemble')
     parser.add_argument('--max-len', type=int, default=100,
                         help='Maximum length of the sentences')
     parser.add_argument('--source-embeddings', type=str, default=None,
