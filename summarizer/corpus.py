@@ -1,12 +1,9 @@
 import os
 
 import nltk
-import sklearn
 
 from sentence import Sentence
 from sentenceCollection import SentenceCollection
-
-from utils import nlp
 
 
 class Corpus(SentenceCollection):
@@ -16,9 +13,6 @@ class Corpus(SentenceCollection):
         self._dirname = dirname
 
         self._prepareSentenceSplitter()
-        self._prepareTokenizer()
-        self._prepareStemmer()
-        self._prepareStopwords()
 
         self._documents = []
 
@@ -27,40 +21,6 @@ class Corpus(SentenceCollection):
             map(lambda p: nltk.sent_tokenize(p, 'english'), doc.split("\n")),
             []
         )
-
-    def _prepareTokenizer(self):
-        self._wordTokenizer = nlp.getTokenizer()
-
-    def _prepareStemmer(self):
-        self._stemmer = nlp.getStemmer()
-
-    def _prepareStopwords(self):
-        self._stopwords = (
-            nltk.corpus.stopwords.words('english')
-            + ". , ; : ? ! ( ) [ ] \{ \}".split()
-            + "/ \ | ~ @ # $ % ^ & * _ - + = ` `` ' '' \" < >".split()
-        )
-
-    def _generateSentenceVectors(self):
-        def _tokenizeSentence(sentenceText):
-            tokens = map(self._stemmer,
-                         self._wordTokenizer(sentenceText.lower())
-                         )
-
-            return tokens
-
-        sentenceVectorizer = sklearn.feature_extraction.text.TfidfVectorizer(
-                                preprocessor=Sentence.getText,
-                                tokenizer=_tokenizeSentence,
-                                stop_words=self._stopwords,
-                                ngram_range=(1, 2)
-                            )
-
-        sentenceVectors = sentenceVectorizer.fit_transform(
-                                    self._sentences
-                                ).toarray()
-
-        map(Sentence.setVector, self._sentences, sentenceVectors)
 
     def load(self, params):
         # load corpus
@@ -80,6 +40,6 @@ class Corpus(SentenceCollection):
         self.addSentences(map(Sentence, set(sentences)))
 
         # preprocess corpus
-        self._generateSentenceVectors()
+        self.generateSentenceVectors(params['sourceLang'])
 
         return self

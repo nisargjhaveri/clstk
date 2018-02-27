@@ -19,6 +19,6 @@ def summarize(inDir, params):
 
     if params['sourceLang'] != params['targetLang']:
         logger.info("Translating summary")
-        summary.translateCollection(params['sourceLang'], params['targetLang'])
+        summary.translate(params['sourceLang'], params['targetLang'])
 
     return summary

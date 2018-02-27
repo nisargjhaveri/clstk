@@ -20,3 +20,11 @@ def getTokenizer():
 
 def getStemmer():
     return nltk.stem.PorterStemmer().stem
+
+
+def getStopwords():
+    return (
+        nltk.corpus.stopwords.words('english')
+        + ". , ; : ? ! ( ) [ ] \{ \}".split()
+        + "/ \ | ~ @ # $ % ^ & * _ - + = ` `` ' '' \" < >".split()
+    )

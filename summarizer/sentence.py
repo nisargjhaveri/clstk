@@ -20,6 +20,12 @@ class Sentence(object):
     def getVector(self):
         return self._vector
 
+    def setTranslationVector(self, vector):
+        self._translationVector = vector
+
+    def getTranslationVector(self):
+        return self._translationVector
+
     def setTranslation(self, translation):
         self._translation = translation
 
