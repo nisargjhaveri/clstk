@@ -49,7 +49,7 @@ class DiversityRewardObjective(Objective):
 
         logger.info("Saving matrix file: %s", matrixFileName)
         np.savetxt(matrixFileName,
-                   sentenceVectors.todense(),
+                   sentenceVectors,
                    header=" ".join(map(str, sentenceVectors.shape)),
                    comments='')
 

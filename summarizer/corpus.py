@@ -56,14 +56,11 @@ class Corpus(SentenceCollection):
                                 ngram_range=(1, 2)
                             )
 
-        self._sentenceVectors = sentenceVectorizer.fit_transform(
+        sentenceVectors = sentenceVectorizer.fit_transform(
                                     self._sentences
-                                )
+                                ).toarray()
 
-        map(Sentence.setVector, self._sentences, self._sentenceVectors)
-
-    def getSentenceVectors(self):
-        return self._sentenceVectors
+        map(Sentence.setVector, self._sentences, sentenceVectors)
 
     def load(self, params):
         # load corpus
