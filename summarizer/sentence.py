@@ -32,8 +32,8 @@ class Sentence(object):
         self._translationTokens = tokenize(self._translation)
 
     def getTranslation(self):
-        return " ".join(self._translationTokens)
-        # return self._translation
+        # return " ".join(self._translationTokens)
+        return self._translation
 
     def getTranslationTokens(self):
         return self._translationTokens
