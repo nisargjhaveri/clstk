@@ -1,21 +1,29 @@
 import argparse
 import logging
 
-from summarizer.utils import params
 from summarizer.utils import colors
 
+from summarizer import linBilmes
+
 if __name__ == '__main__':
+    common_parser = argparse.ArgumentParser(add_help=False)
+
+    common_parser.add_argument('source_directory',
+                               help='Directory containing a set of files to '
+                               'be summarized.')
+    common_parser.add_argument('-v', '--verbose', action='store_true',
+                               help='Show verbose information messages')
+    common_parser.add_argument('--no-colors', action='store_true',
+                               help='Don\'t show colors in verbose log')
+
     parser = argparse.ArgumentParser(
-            parents=[params.getParser()],
             description='Automatically summarize a set of documents'
         )
-    parser.add_argument('source_directory',
-                        help='Directory containing a set of files to be ' +
-                        'summarized.')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='Show verbose information messages')
-    parser.add_argument('--no-colors', action='store_true',
-                        help='Don\'t show colors in verbose log')
+    subparsers = parser.add_subparsers(title='methods',
+                                       description='Summarization method')
+
+    linBilmes.setupArgparse(subparsers.add_parser('linBilmes',
+                                                  parents=[common_parser]))
 
     args = parser.parse_args()
 
@@ -34,12 +42,4 @@ if __name__ == '__main__':
 
     logging.info("Initializing summarizer")
 
-    from summarizer.summarizer import summarize
-
-    summary = summarize(args.source_directory, params.getParams(args))
-
-    logging.info("Printing source summary\n" +
-                 summary.getSummary().encode('utf-8'))
-
-    logging.info("Printing target summary")
-    print summary.getTargetSummary().encode('utf-8')
+    args.func(args)
