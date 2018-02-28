@@ -43,7 +43,8 @@ class Corpus(SentenceCollection):
         self.generateSentenceVectors(params['sourceLang'])
 
         if translate:
-            self.translate(params['sourceLang'], params['targetLang'])
+            if params['sourceLang'] != params['targetLang']:
+                self.translate(params['sourceLang'], params['targetLang'])
             self.generateTranslationSentenceVectors(params['sourceLang'])
 
         return self

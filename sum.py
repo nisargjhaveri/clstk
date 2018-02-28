@@ -4,6 +4,7 @@ import logging
 from summarizer.utils import colors
 
 from summarizer import linBilmes
+from summarizer import coRank
 
 if __name__ == '__main__':
     common_parser = argparse.ArgumentParser(add_help=False)
@@ -24,6 +25,8 @@ if __name__ == '__main__':
 
     linBilmes.setupArgparse(subparsers.add_parser('linBilmes',
                                                   parents=[common_parser]))
+    coRank.setupArgparse(subparsers.add_parser('coRank',
+                                               parents=[common_parser]))
 
     args = parser.parse_args()
 

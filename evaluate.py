@@ -10,6 +10,7 @@ from summarizer.utils import nlp
 from summarizer.evaluation import RougeScore
 
 from summarizer import linBilmes
+from summarizer import coRank
 
 
 def runSummarizer(inDir, outFile, summarizer, args):
@@ -112,6 +113,8 @@ if __name__ == '__main__':
 
     linBilmes.setupArgparse(subparsers.add_parser('linBilmes',
                                                   parents=[common_parser]))
+    coRank.setupArgparse(subparsers.add_parser('coRank',
+                                               parents=[common_parser]))
 
     args = parser.parse_args()
 

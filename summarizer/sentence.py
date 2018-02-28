@@ -39,7 +39,7 @@ class Sentence(object):
         return self._translationTokens
 
     def charCount(self):
-        return len(self._text)
+        return len(self._translation)
 
     def tokenCount(self):
         return len(self._translationTokens)
