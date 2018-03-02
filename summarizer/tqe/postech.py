@@ -547,7 +547,7 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
         logger.info("Training multitask model")
         model_multitask.fit([
                 X_train['src'],
-                X_train['ref']
+                X_train['mt']
             ], [
                 X_train['ref'].reshape((len(X_train['ref']), -1, 1)),
                 y_train
@@ -591,7 +591,7 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
         logger.info("Training estimator")
         model_estimator.fit([
                 X_train['src'],
-                X_train['ref']
+                X_train['mt']
             ], [
                 y_train
             ],
