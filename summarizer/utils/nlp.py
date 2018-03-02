@@ -5,6 +5,13 @@ import nltk
 CORENLP_JAR = os.getenv("CORENLP_JAR")
 
 
+def getSentenceSplitter():
+    def _sent_splitter(text):
+        return nltk.sent_tokenize(text, 'english')
+
+    return _sent_splitter
+
+
 def getTokenizer():
     # from nltk.tokenize.stanford import CoreNLPTokenizer
     # return CoreNLPTokenizer().tokenize

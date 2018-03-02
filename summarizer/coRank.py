@@ -106,8 +106,8 @@ def setupArgparse(parser):
     def run(args, silent=False):
         params = {
             'size': (args.size, args.words),
-            'sourceLang': 'en',
-            'targetLang': args.target_lang or 'en',
+            'sourceLang': args.source_lang,
+            'targetLang': args.target_lang or args.source_lang,
             'alpha': args.alpha,
             'max_iter': args.max_iter
         }
@@ -128,10 +128,14 @@ def setupArgparse(parser):
     parser.add_argument('-w', '--words', action="store_true",
                         help='Caluated size as number of words instead of '
                         'characters')
+    parser.add_argument('--source-lang', type=str, default='en',
+                        metavar="lang", help='Two-letter language code of '
+                        'the source documents language. Defaults to `en`')
     parser.add_argument('-l', '--target-lang', type=str, default=None,
                         metavar="lang", help='Two-letter language code to '
                         'generate cross-lingual summary. '
-                        'Source language is assumed to be English.')
+                        'Defaults to source language.')
+
     parser.add_argument('--alpha', type=float, default=.5,
                         help='Relative contributions to the final saliency '
                         'scores from the information in the same language and '

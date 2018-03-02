@@ -30,8 +30,8 @@ def setupArgparse(parser):
         params = {
             'objectives': objectives.utils.getParams(args),
             'size': (args.size, args.words),
-            'sourceLang': 'en',
-            'targetLang': args.target_lang or 'en'
+            'sourceLang': args.source_lang,
+            'targetLang': args.target_lang or args.source_lang,
         }
 
         summary = summarize(args.source_directory, params)
@@ -50,10 +50,13 @@ def setupArgparse(parser):
     parser.add_argument('-w', '--words', action="store_true",
                         help='Caluated size as number of words instead of '
                         'characters')
+    parser.add_argument('--source-lang', type=str, default='en',
+                        metavar="lang", help='Two-letter language code of '
+                        'the source documents language. Defaults to `en`')
     parser.add_argument('-l', '--target-lang', type=str, default=None,
                         metavar="lang", help='Two-letter language code to '
                         'generate cross-lingual summary. '
-                        'Source language is assumed to be English.')
+                        'Defaults to source language.')
 
     objectives.utils.addObjectiveParams(parser)
 

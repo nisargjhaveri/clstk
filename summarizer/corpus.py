@@ -1,9 +1,9 @@
 import os
 
-import nltk
-
 from sentence import Sentence
 from sentenceCollection import SentenceCollection
+
+from utils import nlp
 
 
 class Corpus(SentenceCollection):
@@ -18,7 +18,7 @@ class Corpus(SentenceCollection):
 
     def _prepareSentenceSplitter(self):
         self._sentenceSplitter = lambda doc: sum(
-            map(lambda p: nltk.sent_tokenize(p, 'english'), doc.split("\n")),
+            map(lambda p: nlp.getSentenceSplitter()(p), doc.split("\n")),
             []
         )
 
