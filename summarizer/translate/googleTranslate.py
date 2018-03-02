@@ -8,6 +8,7 @@ import time
 import requests
 import re
 import json
+import shelve
 
 window = {
     # 'TKK': config.get('TKK') or '0' TODO
@@ -156,6 +157,13 @@ def _translateText(text, source, target):
 
 
 def translate(text, source, target, sentencePerLine=True):
+    def cacheKey(text):
+        return "_".join(text, source, target, str(sentencePerLine))
+
+    with shelve.open('.translation-cache') as cache:
+        if cacheKey(text) in cache:
+            return cache[cacheKey(text)]
+
     translation, sentences = _translateText(text, source, target)
 
     if (sentencePerLine):
@@ -171,5 +179,8 @@ def translate(text, source, target, sentencePerLine=True):
                     "source": sourceSentences[i].strip(),
                     "target": targetSentences[i].strip()
                 })
+
+    with shelve.open('.translation-cache') as cache:
+        cache[cacheKey(text)] = (translation, sentences)
 
     return translation, sentences
