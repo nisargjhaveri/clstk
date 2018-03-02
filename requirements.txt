@@ -8,6 +8,7 @@ polyglot
 regex
 kenlm
 joblib
+google-cloud-translate
 https://github.com/kpu/kenlm/archive/master.zip
 
 #keras

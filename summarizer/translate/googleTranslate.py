@@ -1,110 +1,16 @@
-# Adopted to Python from:
-# 1. https://github.com/matheuss/google-translate-token and
-# 2. https://github.com/nisargjhaveri/news-access/tree/master/translate
-
-# DO NOT use this for commercial purpuses
-
-import time
-import requests
-import re
-import json
 import shelve
 
-window = {
-    # 'TKK': config.get('TKK') or '0' TODO
-    'TKK': '0'
-}
+from google.cloud import translate as googleTranslate
 
-
-# // BEGIN
-def _xr(a, b):
-    c = 0
-    while c < len(b) - 2:
-        d = b[c + 2]
-        d = ord(d[0]) - 87 if "a" <= d else int(d)
-        d = (a % 0x100000000) >> d if "+" == b[c + 1] else a << d
-        a = a + d & 4294967295 if "+" == b[c] else a ^ d
-        c += 3
-    return a
-
-
-def _sM(a):
-    b = window["TKK"] if "TKK" in window else ""
-
-    d = b.split(".")
-    b = int(d[0]) or 0
-    e = []
-    f = 0
-    g = 0
-    while g < len(a):
-        l = ord(a[g])
-        if 128 > l:
-            e.append(l)
-        else:
-            if 2048 > l:
-                e.append(l >> 6 | 192)
-            else:
-                if 55296 == (l & 64512) \
-                   and g + 1 < len(a) \
-                   and 56320 == (ord(a[g + 1]) & 64512):
-                    g += 1
-                    l = 65536 + ((l & 1023) << 10) + (ord(a[g]) & 1023)
-                    e.append(l >> 18 | 240)
-                    e.append(l >> 12 & 63 | 128)
-                else:
-                    e.append(l >> 12 | 224)
-                    e.append(l >> 6 & 63 | 128)
-            e.append(l & 63 | 128)
-        g += 1
-    a = b
-    for f in xrange(len(e)):
-        a += e[f]
-        a = _xr(a, "+-a^+6")
-    a = _xr(a, "+-3^+b+-f")
-    a ^= int(d[1]) or 0
-    if 0 > a:
-        a = (a & 2147483647) + 2147483648
-    a %= 1E6
-    a = int(a)
-    return str(a) + "." + str(a ^ b)
-# // END
-
-
-def _evalTKK(TKK):
-    TKK = TKK.decode('string_escape')
-    evalStatments = map(str.strip,
-                        TKK[len("eval('((function(){"):-len("})")].split(";"))
-
-    for statement in evalStatments:
-        if statement.startswith("var"):
-            var, val = statement[len("var "):].split("=", 1)
-            if var == 'a':
-                a = eval(val)
-            elif var == 'b':
-                b = eval(val)
-        elif statement.startswith("return"):
-            statement = statement[len("return "):]
-            TKK = str(statement.split("+")[0]) + '.' + str(a + b)
-
-    return TKK
-
-
-def _getToken(text):
-    # Update token if needed
-    now = int(time.time() / 3600000)
-    if int(window['TKK'].split('.')[0]) != now:
-        r = requests.get('https://translate.google.com')
-
-        TKK = _evalTKK(re.findall(r"TKK=(.*?)\(\)\)'\);", r.text)[0])
-        window['TKK'] = TKK
-
-    # Generate token for text
-    tk = _sM(text)
-
-    return tk
+translate_client = None
 
 
 def _translateText(text, source, target):
+    global translate_client
+
+    if not translate_client:
+        translate_client = googleTranslate.Client()
+
     if len(text) >= 4500:
         lines = text.split("\n")
 
@@ -113,53 +19,27 @@ def _translateText(text, source, target):
 
         half = len(lines) / 2
 
-        translation1, sentences1 = _translateText("\n".join(lines[:half]),
-                                                  source, target)
-        translation2, sentences2 = _translateText("\n".join(lines[half:]),
-                                                  source, target)
+        translation1 = _translateText("\n".join(lines[:half]),
+                                      source, target)
+        translation2 = _translateText("\n".join(lines[half:]),
+                                      source, target)
 
         return (
-            "\n".join([translation1, translation2]), sentences1 + sentences2
+            "\n".join([translation1, translation2])
         )
 
-    url = 'https://translate.google.com/translate_a/single'
-    data = {
-        'client': 't',
-        'sl': source,
-        'tl': target,
-        'hl': target,
-        'dt': ['at', 'bd', 'ex', 'ld', 'md', 'qca', 'rw', 'rm', 'ss', 't'],
-        'ie': 'UTF-8',
-        'oe': 'UTF-8',
-        'otf': 1,
-        'ssel': 0,
-        'tsel': 0,
-        'kc': 7,
-        'q': text,
-        'tk': _getToken(text)
-    }
+    translation = translate_client.translate(text,
+                                             format_='text',
+                                             source_language=source,
+                                             target_language=target)
 
-    req = requests.post(url, data)
-    res = json.loads(req.text)
-
-    translation = ""
-    sentences = []
-
-    for sentence in res[0]:
-        if sentence[0]:
-            translation += sentence[0]
-            sentences.append({
-                "source": sentence[1].strip(),
-                "target": sentence[0].strip()
-            })
-
-    return translation, sentences
+    return translation['translatedText']
 
 
-def translate(text, source, target, sentencePerLine=True):
+def translate(text, source, target):
     def cacheKey(text):
         return "_".join([
-            text, source, target, str(sentencePerLine)
+            text, source, target
         ]).encode('utf-8')
 
     cache = shelve.open('.translation-cache')
@@ -167,21 +47,20 @@ def translate(text, source, target, sentencePerLine=True):
     if cacheKey(text) in cache:
         return cache[cacheKey(text)]
 
-    translation, sentences = _translateText(text, source, target)
+    translation = _translateText(text, source, target)
 
-    if (sentencePerLine):
-        sentences = []
-        sourceSentences = text.split("\n")
-        targetSentences = translation.split("\n")
+    sentences = []
+    sourceSentences = text.split("\n")
+    targetSentences = translation.split("\n")
 
-        if (len(sourceSentences) != len(targetSentences)):
-            raise RuntimeError("GOOGLE_TRANSLATION_ERROR")
-        else:
-            for i in xrange(len(sourceSentences)):
-                sentences.append({
-                    "source": sourceSentences[i].strip(),
-                    "target": targetSentences[i].strip()
-                })
+    if (len(sourceSentences) != len(targetSentences)):
+        raise RuntimeError("GOOGLE_TRANSLATION_ERROR")
+    else:
+        for i in xrange(len(sourceSentences)):
+            sentences.append({
+                "source": sourceSentences[i].strip(),
+                "target": targetSentences[i].strip()
+            })
 
     cache[cacheKey(text)] = (translation, sentences)
     cache.close()
