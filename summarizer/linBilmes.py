@@ -8,55 +8,51 @@ import logging
 logger = logging.getLogger("linBilmes.py")
 
 
-class Optimizer(object):
-    def __init__(self):
-        pass
+def optimizeGreedy(sizeBudget, objective, corpus):
+    summary = Summary()
+    sentencesLeft = corpus.getSentences()
 
-    def greedy(self, sizeBudget, objective, corpus):
-        summary = Summary()
-        sentencesLeft = corpus.getSentences()
+    objective.setCorpus(corpus)
 
-        objective.setCorpus(corpus)
+    sizeBudget, countTokens = sizeBudget
+    sizeName = "tokens" if countTokens else "chars"
 
-        sizeBudget, countTokens = sizeBudget
-        sizeName = "tokens" if countTokens else "chars"
+    def sentenceSize(sent):
+        return sent.tokenCount() if countTokens else sent.charCount()
 
-        def sentenceSize(sent):
-            return sent.tokenCount() if countTokens else sent.charCount()
+    def summarySize(summary):
+        return summary.tokenCount() if countTokens else summary.charCount()
 
-        def summarySize(summary):
-            return summary.tokenCount() if countTokens else summary.charCount()
+    logger.info("Greedily optimizing the objective")
+    logger.info("Summary budget: %d %s", sizeBudget, sizeName)
+    while summarySize(summary) < sizeBudget and len(sentencesLeft) > 0:
+        objectiveValues = map(objective.getObjective(summary),
+                              sentencesLeft)
+        maxObjectiveValue = max(objectiveValues)
 
-        logger.info("Greedily optimizing the objective")
-        logger.info("Summary budget: %d %s", sizeBudget, sizeName)
-        while summarySize(summary) < sizeBudget and len(sentencesLeft) > 0:
-            objectiveValues = map(objective.getObjective(summary),
-                                  sentencesLeft)
-            maxObjectiveValue = max(objectiveValues)
+        candidates = [sentencesLeft[i]
+                      for i, v in enumerate(objectiveValues)
+                      if v == maxObjectiveValue]
 
-            candidates = [sentencesLeft[i]
-                          for i, v in enumerate(objectiveValues)
-                          if v == maxObjectiveValue]
+        candidateSizes = map(sentenceSize, candidates)
+        minSize = min(candidateSizes)
 
-            candidateSizes = map(sentenceSize, candidates)
-            minSize = min(candidateSizes)
+        selectedCandidate = candidates[candidateSizes.index(minSize)]
+        sentencesLeft.remove(selectedCandidate)
 
-            selectedCandidate = candidates[candidateSizes.index(minSize)]
-            sentencesLeft.remove(selectedCandidate)
+        if summarySize(summary) + minSize <= sizeBudget:
+            logger.info("Sentence added with objective value: %f, " +
+                        "size: %d", maxObjectiveValue, minSize)
+            summary.addSentence(selectedCandidate)
 
-            if summarySize(summary) + minSize <= sizeBudget:
-                logger.info("Sentence added with objective value: %f, " +
-                            "size: %d", maxObjectiveValue, minSize)
-                summary.addSentence(selectedCandidate)
+        budgetLeft = sizeBudget - summarySize(summary)
+        sentencesLeft = filter(lambda s: sentenceSize(s) < budgetLeft,
+                               sentencesLeft)
 
-            budgetLeft = sizeBudget - summarySize(summary)
-            sentencesLeft = filter(lambda s: sentenceSize(s) < budgetLeft,
-                                   sentencesLeft)
+    logger.info("Optimization done, summary size: %d chars, %d tokens",
+                summary.charCount(), summary.tokenCount())
 
-        logger.info("Optimization done, summary size: %d chars, %d tokens",
-                    summary.charCount(), summary.tokenCount())
-
-        return summary
+    return summary
 
 
 def summarize(inDir, params):
@@ -66,8 +62,7 @@ def summarize(inDir, params):
     logger.info("Setting up summarizer")
     objective = AggregateObjective(params['objectives'])
 
-    optimizer = Optimizer()
-    summary = optimizer.greedy(params["size"], objective, c)
+    summary = optimizeGreedy(params["size"], objective, c)
 
     if params['sourceLang'] != params['targetLang']:
         logger.info("Translating summary")
