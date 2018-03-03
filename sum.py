@@ -5,6 +5,7 @@ from summarizer.utils import colors
 
 from summarizer import linBilmes
 from summarizer import coRank
+from summarizer import simFusion
 
 if __name__ == '__main__':
     common_parser = argparse.ArgumentParser(add_help=False)
@@ -27,6 +28,8 @@ if __name__ == '__main__':
                                                   parents=[common_parser]))
     coRank.setupArgparse(subparsers.add_parser('coRank',
                                                parents=[common_parser]))
+    simFusion.setupArgparse(subparsers.add_parser('simFusion',
+                                                  parents=[common_parser]))
 
     args = parser.parse_args()
 
