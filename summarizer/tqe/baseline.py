@@ -453,7 +453,7 @@ def train_model(workspaceDir, modelName,
 def setupArgparse(parser):
     def run(args):
         train_model(args.workspace_dir,
-                    args.model_name,
+                    args.data_name,
                     devFileSuffix=args.dev_file_suffix,
                     testFileSuffix=args.test_file_suffix,
                     featureFileSuffix=args.feature_file_suffix,
@@ -464,15 +464,6 @@ def setupArgparse(parser):
                     parseSentences=args.parse,
                     maxJobs=args.max_jobs)
 
-    parser.add_argument('workspace_dir',
-                        help='Directory containing prepared files')
-    parser.add_argument('model_name',
-                        help='Identifier for prepared files used with ' +
-                        'preparation')
-    parser.add_argument('--dev-file-suffix', type=str, default=None,
-                        help='Suffix for dev files')
-    parser.add_argument('--test-file-suffix', type=str, default=None,
-                        help='Suffix for test files')
     parser.add_argument('--feature-file-suffix', type=str, default=None,
                         help='Suffix for feature files')
     parser.add_argument('--train-lm', action='store_true',

@@ -632,7 +632,7 @@ def setupArgparse(parser):
 
     def run(args):
         train_model(args.workspace_dir,
-                    args.model_name,
+                    args.data_name,
                     devFileSuffix=args.dev_file_suffix,
                     testFileSuffix=args.test_file_suffix,
                     batchSize=args.batch_size,
@@ -650,14 +650,6 @@ def setupArgparse(parser):
                     predictor_data=args.predictor_data,
                     )
 
-    parser.add_argument('workspace_dir',
-                        help='Directory containing prepared files')
-    parser.add_argument('model_name',
-                        help='Identifier for prepared files')
-    parser.add_argument('--dev-file-suffix', type=str, default=None,
-                        help='Suffix for dev files')
-    parser.add_argument('--test-file-suffix', type=str, default=None,
-                        help='Suffix for test files')
     parser.add_argument('-b', '--batch-size', type=int, default=50,
                         help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=25,

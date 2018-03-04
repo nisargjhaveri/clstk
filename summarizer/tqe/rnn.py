@@ -1,4 +1,5 @@
 import os
+import shelve
 
 from . import utils
 
@@ -13,7 +14,7 @@ import keras.backend as K
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils.generic_utils import CustomObjectScope
 
-from .common import WordIndexTransformer, _loadData
+from .common import WordIndexTransformer, _loadData, _preprocessSentences
 from .common import _printModelSummary, TimeDistributedSequential
 from .common import pearsonr
 from .common import get_fastText_embeddings
@@ -306,6 +307,7 @@ def getEnsembledModel(ensemble_count, **kwargs):
 
 
 def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
+                saveModel,
                 batchSize, epochs, max_len, vocab_size,
                 **kwargs):
     logger.info("initializing TQE training")
@@ -358,8 +360,18 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
         verbose=2
     )
 
-    # logger.info("Saving model")
-    # model.save(fileBasename + "neural.model.h5")
+    if saveModel:
+        logger.info("Saving model")
+        shelf = shelve.open(os.path.join(workspaceDir, "model." + saveModel))
+
+        shelf['config'] = model.get_config()
+        shelf['weights'] = model.get_weights()
+        shelf['params'] = {
+            'srcVocabTransformer': srcVocabTransformer,
+            'refVocabTransformer': refVocabTransformer,
+        }
+
+        shelf.close()
 
     logger.info("Evaluating on development data of size %d" % len(y_dev))
     utils.evaluate(model.predict([
@@ -374,12 +386,66 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
     ]).reshape((-1,)), y_test)
 
 
+def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
+    shelf = shelve.open(os.path.join(workspaceDir, "model." + saveModel), 'r')
+
+    srcVocabTransformer = shelf['params']['srcVocabTransformer']
+    refVocabTransformer = shelf['params']['refVocabTransformer']
+
+    kwargs['src_fastText'] = None
+    kwargs['ref_fastText'] = None
+
+    model = getEnsembledModel(srcVocabTransformer=srcVocabTransformer,
+                              refVocabTransformer=refVocabTransformer,
+                              **kwargs)
+
+    model.set_weights(shelf['weights'])
+
+    shelf.close()
+
+    def predictor(src, mt):
+        if not isinstance(src, list):
+            src = [src]
+            mt = [mt]
+
+        src = _preprocessSentences(src)
+        mt = _preprocessSentences(mt)
+
+        src = srcVocabTransformer.transform(src)
+        mt = refVocabTransformer.transform(mt)
+
+        srcMaxLen = min(max(map(len, src)), max_len)
+        refMaxLen = min(max(map(len, mt)), max_len)
+
+        src = pad_sequences(src, maxlen=srcMaxLen),
+        mt = pad_sequences(mt, maxlen=refMaxLen),
+
+        return model.predict([src, mt]).reshape((-1,))
+
+    return predictor
+
+
 def setupArgparse(parser):
+    def getPredictor(args):
+        return load_predictor(args.workspace_dir,
+                              savesModel=args.save_model,
+                              ensemble_count=args.ensemble_count,
+                              max_len=args.max_len,
+                              embedding_size=args.embedding_size,
+                              gru_size=args.gru_size,
+                              src_fastText=args.source_embeddings,
+                              ref_fastText=args.target_embeddings,
+                              attention=args.with_attention,
+                              summary_attention=args.summary_attention,
+                              use_estimator=(not args.no_estimator),
+                              )
+
     def run(args):
         train_model(args.workspace_dir,
-                    args.model_name,
+                    args.data_name,
                     devFileSuffix=args.dev_file_suffix,
                     testFileSuffix=args.test_file_suffix,
+                    saveModel=args.save_model,
                     batchSize=args.batch_size,
                     epochs=args.epochs,
                     ensemble_count=args.ensemble_count,
@@ -394,14 +460,6 @@ def setupArgparse(parser):
                     use_estimator=(not args.no_estimator),
                     )
 
-    parser.add_argument('workspace_dir',
-                        help='Directory containing prepared files')
-    parser.add_argument('model_name',
-                        help='Identifier for prepared files')
-    parser.add_argument('--dev-file-suffix', type=str, default=None,
-                        help='Suffix for dev files')
-    parser.add_argument('--test-file-suffix', type=str, default=None,
-                        help='Suffix for test files')
     parser.add_argument('-b', '--batch-size', type=int, default=50,
                         help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=25,
@@ -426,4 +484,5 @@ def setupArgparse(parser):
                         help='Get quality summary using attention')
     parser.add_argument('--no-estimator', action="store_true",
                         help='Don\'t use separate estimator layer')
+
     parser.set_defaults(func=run)

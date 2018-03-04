@@ -1,11 +1,9 @@
 import argparse
 import logging
 
-from summarizer.tqe import baseline
-from summarizer.tqe import postech
-from summarizer.tqe import rnn
-
 from summarizer.utils import colors
+
+from summarizer.tqe import setupSubparsers, run
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -16,9 +14,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(title='models',
                                        description='TQE model to train')
 
-    baseline.setupArgparse(subparsers.add_parser('baseline'))
-    postech.setupArgparse(subparsers.add_parser('postech'))
-    rnn.setupArgparse(subparsers.add_parser('rnn'))
+    setupSubparsers(subparsers)
 
     args = parser.parse_args()
 
@@ -37,4 +33,4 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-    args.func(args)
+    run(args)

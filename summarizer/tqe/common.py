@@ -59,9 +59,9 @@ class WordIndexTransformer(object):
         return self.vocabMap
 
 
-def _loadSentences(filePath, lower=True, tokenize=True):
-    def _processLine(line):
-        sentence = line.decode('utf-8').strip()
+def _preprocessSentences(sentences, lower=True, tokenize=True):
+    def _processSentence(sentece):
+        sentence = sentece.decode('utf-8').strip()
 
         if lower:
             sentence = sentence.lower()
@@ -71,10 +71,14 @@ def _loadSentences(filePath, lower=True, tokenize=True):
 
         return sentence
 
-    with open(filePath) as lines:
-        sentences = map(_processLine, list(lines))
+    return np.array(map(_processSentence, sentences), dtype=object)
 
-    return np.array(sentences, dtype=object)
+
+def _loadSentences(filePath, **kwargs):
+    with open(filePath) as lines:
+        sentences = _preprocessSentences(list(lines), **kwargs)
+
+    return sentences
 
 
 def _loadData(fileBasename, devFileSuffix=None, testFileSuffix=None,
