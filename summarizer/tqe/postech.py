@@ -1,4 +1,5 @@
 import os
+import shelve
 
 from . import utils
 
@@ -15,7 +16,8 @@ import keras.backend as K
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils.generic_utils import CustomObjectScope
 
-from .common import WordIndexTransformer, _loadSentences, _loadData
+from .common import WordIndexTransformer
+from .common import _loadSentences, _loadData, _preprocessSentences
 from .common import _printModelSummary, TimeDistributedSequential
 from .common import pearsonr
 
@@ -480,6 +482,7 @@ def getEnsembledModel(ensemble_count, **kwargs):
 
 
 def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
+                saveModel,
                 batchSize, epochs, max_len, vocab_size, training_mode,
                 predictor_model, predictor_data,
                 **kwargs):
@@ -609,6 +612,20 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
 
     # logger.info("Saving model")
     # model.save(fileBasename + "neural.model.h5")
+    if saveModel:
+        logger.info("Saving model")
+        shelf = shelve.open(os.path.join(workspaceDir, "model." + saveModel))
+
+        models = [model_multitask, model_predictor, model_estimator]
+
+        shelf['config'] = [model.get_config() for model in models]
+        shelf['weights'] = [model.get_weights() for model in models]
+        shelf['params'] = {
+            'srcVocabTransformer': srcVocabTransformer,
+            'refVocabTransformer': refVocabTransformer,
+        }
+
+        shelf.close()
 
     logger.info("Evaluating on development data of size %d" % len(y_dev))
     utils.evaluate(model_estimator.predict([
@@ -623,17 +640,59 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
     ]).reshape((-1,)), y_test)
 
 
-def train(args):
-    def _get_training_mode(args):
-        if args.two_step:
-            return "two-step"
-        else:
-            return "multitask"
+def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
+    shelf = shelve.open(os.path.join(workspaceDir, "model." + saveModel), 'r')
 
+    srcVocabTransformer = shelf['params']['srcVocabTransformer']
+    refVocabTransformer = shelf['params']['refVocabTransformer']
+
+    model_multitask, model_predictor, model_estimator = \
+        getEnsembledModel(srcVocabTransformer=srcVocabTransformer,
+                          refVocabTransformer=refVocabTransformer,
+                          **kwargs)
+
+    models = [model_multitask, model_predictor, model_estimator]
+
+    for model in models:
+        model.set_weights(shelf['weights'])
+
+    shelf.close()
+
+    def predictor(src, mt):
+        if not isinstance(src, list):
+            src = [src]
+            mt = [mt]
+
+        src = _preprocessSentences(src)
+        mt = _preprocessSentences(mt)
+
+        src = srcVocabTransformer.transform(src)
+        mt = refVocabTransformer.transform(mt)
+
+        srcMaxLen = min(max(map(len, src)), max_len)
+        refMaxLen = min(max(map(len, mt)), max_len)
+
+        src = pad_sequences(src, maxlen=srcMaxLen),
+        mt = pad_sequences(mt, maxlen=refMaxLen),
+
+        return model_estimator.predict([src, mt]).reshape((-1,))
+
+    return predictor
+
+
+def _get_training_mode(args):
+    if args.two_step:
+        return "two-step"
+    else:
+        return "multitask"
+
+
+def train(args):
     train_model(args.workspace_dir,
                 args.data_name,
                 devFileSuffix=args.dev_file_suffix,
                 testFileSuffix=args.test_file_suffix,
+                saveModel=args.save_model,
                 batchSize=args.batch_size,
                 epochs=args.epochs,
                 ensemble_count=args.ensemble_count,
@@ -648,3 +707,19 @@ def train(args):
                 predictor_model=args.predictor_model,
                 predictor_data=args.predictor_data,
                 )
+
+
+def getPredictor(args):
+    return load_predictor(args.workspace_dir,
+                          savesModel=args.save_model,
+                          ensemble_count=args.ensemble_count,
+                          max_len=args.max_len,
+                          embedding_size=args.embedding_size,
+                          gru_size=args.gru_size,
+                          qualvec_size=args.qualvec_size,
+                          maxout_size=args.maxout_size,
+                          maxout_units=args.maxout_units,
+                          training_mode=_get_training_mode(args),
+                          predictor_model=args.predictor_model,
+                          predictor_data=args.predictor_data,
+                          )
