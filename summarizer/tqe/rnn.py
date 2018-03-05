@@ -425,64 +425,37 @@ def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
     return predictor
 
 
-def setupArgparse(parser):
-    def getPredictor(args):
-        return load_predictor(args.workspace_dir,
-                              savesModel=args.save_model,
-                              ensemble_count=args.ensemble_count,
-                              max_len=args.max_len,
-                              embedding_size=args.embedding_size,
-                              gru_size=args.gru_size,
-                              src_fastText=args.source_embeddings,
-                              ref_fastText=args.target_embeddings,
-                              attention=args.with_attention,
-                              summary_attention=args.summary_attention,
-                              use_estimator=(not args.no_estimator),
-                              )
+def train(args):
+    train_model(args.workspace_dir,
+                args.data_name,
+                devFileSuffix=args.dev_file_suffix,
+                testFileSuffix=args.test_file_suffix,
+                saveModel=args.save_model,
+                batchSize=args.batch_size,
+                epochs=args.epochs,
+                ensemble_count=args.ensemble_count,
+                vocab_size=args.vocab_size,
+                max_len=args.max_len,
+                embedding_size=args.embedding_size,
+                gru_size=args.gru_size,
+                src_fastText=args.source_embeddings,
+                ref_fastText=args.target_embeddings,
+                attention=args.with_attention,
+                summary_attention=args.summary_attention,
+                use_estimator=(not args.no_estimator),
+                )
 
-    def run(args):
-        train_model(args.workspace_dir,
-                    args.data_name,
-                    devFileSuffix=args.dev_file_suffix,
-                    testFileSuffix=args.test_file_suffix,
-                    saveModel=args.save_model,
-                    batchSize=args.batch_size,
-                    epochs=args.epochs,
-                    ensemble_count=args.ensemble_count,
-                    vocab_size=args.vocab_size,
-                    max_len=args.max_len,
-                    embedding_size=args.embedding_size,
-                    gru_size=args.gru_size,
-                    src_fastText=args.source_embeddings,
-                    ref_fastText=args.target_embeddings,
-                    attention=args.with_attention,
-                    summary_attention=args.summary_attention,
-                    use_estimator=(not args.no_estimator),
-                    )
 
-    parser.add_argument('-b', '--batch-size', type=int, default=50,
-                        help='Batch size')
-    parser.add_argument('-e', '--epochs', type=int, default=25,
-                        help='Number of epochs to run')
-    parser.add_argument('--ensemble-count', type=int, default=3,
-                        help='Number of models to ensemble')
-    parser.add_argument('--max-len', type=int, default=100,
-                        help='Maximum length of the sentences')
-    parser.add_argument('--source-embeddings', type=str, default=None,
-                        help='fastText model name for target language')
-    parser.add_argument('--target-embeddings', type=str, default=None,
-                        help='fastText model name for target language')
-    parser.add_argument('-m', '--embedding-size', type=int, default=300,
-                        help='Size of word embeddings')
-    parser.add_argument('-n', '--gru-size', type=int, default=500,
-                        help='Size of GRU')
-    parser.add_argument('-v', '--vocab-size', type=int, default=40000,
-                        help='Maximum vocab size')
-    parser.add_argument('--with-attention', action="store_true",
-                        help='Add attention in decoder')
-    parser.add_argument('--summary-attention', action="store_true",
-                        help='Get quality summary using attention')
-    parser.add_argument('--no-estimator', action="store_true",
-                        help='Don\'t use separate estimator layer')
-
-    parser.set_defaults(func=run)
+def getPredictor(args):
+    return load_predictor(args.workspace_dir,
+                          savesModel=args.save_model,
+                          ensemble_count=args.ensemble_count,
+                          max_len=args.max_len,
+                          embedding_size=args.embedding_size,
+                          gru_size=args.gru_size,
+                          src_fastText=args.source_embeddings,
+                          ref_fastText=args.target_embeddings,
+                          attention=args.with_attention,
+                          summary_attention=args.summary_attention,
+                          use_estimator=(not args.no_estimator),
+                          )

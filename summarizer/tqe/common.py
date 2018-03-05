@@ -74,9 +74,10 @@ def _preprocessSentences(sentences, lower=True, tokenize=True):
     return np.array(map(_processSentence, sentences), dtype=object)
 
 
-def _loadSentences(filePath, **kwargs):
+def _loadSentences(filePath, lower=True, tokenize=True):
     with open(filePath) as lines:
-        sentences = _preprocessSentences(list(lines), **kwargs)
+        sentences = _preprocessSentences(list(lines),
+                                         lower=lower, tokenize=tokenize)
 
     return sentences
 

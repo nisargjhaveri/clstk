@@ -623,57 +623,28 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
     ]).reshape((-1,)), y_test)
 
 
-def setupArgparse(parser):
+def train(args):
     def _get_training_mode(args):
         if args.two_step:
             return "two-step"
         else:
             return "multitask"
 
-    def run(args):
-        train_model(args.workspace_dir,
-                    args.data_name,
-                    devFileSuffix=args.dev_file_suffix,
-                    testFileSuffix=args.test_file_suffix,
-                    batchSize=args.batch_size,
-                    epochs=args.epochs,
-                    ensemble_count=args.ensemble_count,
-                    vocab_size=args.vocab_size,
-                    max_len=args.max_len,
-                    embedding_size=args.embedding_size,
-                    gru_size=args.gru_size,
-                    qualvec_size=args.qualvec_size,
-                    maxout_size=args.maxout_size,
-                    maxout_units=args.maxout_units,
-                    training_mode=_get_training_mode(args),
-                    predictor_model=args.predictor_model,
-                    predictor_data=args.predictor_data,
-                    )
-
-    parser.add_argument('-b', '--batch-size', type=int, default=50,
-                        help='Batch size')
-    parser.add_argument('-e', '--epochs', type=int, default=25,
-                        help='Number of epochs to run')
-    parser.add_argument('--ensemble-count', type=int, default=3,
-                        help='Number of models to ensemble')
-    parser.add_argument('--max-len', type=int, default=100,
-                        help='Maximum length of the sentences')
-    parser.add_argument('-m', '--embedding-size', type=int, default=300,
-                        help='Size of word embeddings')
-    parser.add_argument('-n', '--gru-size', type=int, default=500,
-                        help='Size of GRU')
-    parser.add_argument('-q', '--qualvec-size', type=int, default=500,
-                        help='Size of last layer connected before softmax')
-    parser.add_argument('-l', '--maxout-size', type=int, default=500,
-                        help='Size of maxout layer output')
-    parser.add_argument('-v', '--vocab-size', type=int, default=40000,
-                        help='Maximum vocab size')
-    parser.add_argument('--maxout-units', type=int, default=2,
-                        help='Number of maxout units')
-    parser.add_argument('--predictor-model', type=str, default=None,
-                        help='Name of predictor model to save/load from')
-    parser.add_argument('--two-step', action="store_true",
-                        help='Use two step training instead of multitask')
-    parser.add_argument('--predictor-data', type=str, default=None,
-                        help='Identifier for prepared data to train predictor')
-    parser.set_defaults(func=run)
+    train_model(args.workspace_dir,
+                args.data_name,
+                devFileSuffix=args.dev_file_suffix,
+                testFileSuffix=args.test_file_suffix,
+                batchSize=args.batch_size,
+                epochs=args.epochs,
+                ensemble_count=args.ensemble_count,
+                vocab_size=args.vocab_size,
+                max_len=args.max_len,
+                embedding_size=args.embedding_size,
+                gru_size=args.gru_size,
+                qualvec_size=args.qualvec_size,
+                maxout_size=args.maxout_size,
+                maxout_units=args.maxout_units,
+                training_mode=_get_training_mode(args),
+                predictor_model=args.predictor_model,
+                predictor_data=args.predictor_data,
+                )

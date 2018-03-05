@@ -3,7 +3,7 @@ import logging
 
 from summarizer.utils import colors
 
-from summarizer.tqe import setupSubparsers, run
+from summarizer.tqe import setupSubparsers, train
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -11,10 +11,7 @@ if __name__ == '__main__':
     parser.add_argument('--no-colors', action='store_true',
                         help='Don\'t show colors in verbose log')
 
-    subparsers = parser.add_subparsers(title='models',
-                                       description='TQE model to train')
-
-    setupSubparsers(subparsers)
+    setupSubparsers(parser)
 
     args = parser.parse_args()
 
@@ -33,4 +30,4 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-    run(args)
+    train(args)

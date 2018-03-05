@@ -450,32 +450,15 @@ def train_model(workspaceDir, modelName,
     # plotData(X_train, y_train, svr)
 
 
-def setupArgparse(parser):
-    def run(args):
-        train_model(args.workspace_dir,
-                    args.data_name,
-                    devFileSuffix=args.dev_file_suffix,
-                    testFileSuffix=args.test_file_suffix,
-                    featureFileSuffix=args.feature_file_suffix,
-                    normalize=args.normalize,
-                    tune=args.tune,
-                    trainLM=args.train_lm,
-                    trainNGrams=args.train_ngrams,
-                    parseSentences=args.parse,
-                    maxJobs=args.max_jobs)
-
-    parser.add_argument('--feature-file-suffix', type=str, default=None,
-                        help='Suffix for feature files')
-    parser.add_argument('--train-lm', action='store_true',
-                        help='Train language model.')
-    parser.add_argument('--train-ngrams', action='store_true',
-                        help='Compute ngram freqs.')
-    parser.add_argument('--parse', action='store_true',
-                        help='Parse sentences.')
-    parser.add_argument('--normalize', action='store_true',
-                        help='Weather to normalize features or not.')
-    parser.add_argument('--tune', action='store_true',
-                        help='Weather to tune parameters or not.')
-    parser.add_argument('--max-jobs', type=int, default=-1,
-                        help='Maximum number of jobs to run parallelly')
-    parser.set_defaults(func=run)
+def train(args):
+    train_model(args.workspace_dir,
+                args.data_name,
+                devFileSuffix=args.dev_file_suffix,
+                testFileSuffix=args.test_file_suffix,
+                featureFileSuffix=args.feature_file_suffix,
+                normalize=args.normalize,
+                tune=args.tune,
+                trainLM=args.train_lm,
+                trainNGrams=args.train_ngrams,
+                parseSentences=args.parse,
+                maxJobs=args.max_jobs)
