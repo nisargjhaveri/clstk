@@ -1,11 +1,13 @@
 from ._coverageObjective import CoverageObjective
 from ._dievrsityRewardObjective import DiversityRewardObjective
+from ._translationQualityObjective import TranslationQualityObjective
 
 
 def getObjectives():
     return [
         ('coverage', 1.0, CoverageObjective),
-        ('diversity', 6.0, DiversityRewardObjective)
+        ('diversity', 6.0, DiversityRewardObjective),
+        ('tqe', 1.0, TranslationQualityObjective),
     ]
 
 

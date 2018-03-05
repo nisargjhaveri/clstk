@@ -417,8 +417,8 @@ def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
         srcMaxLen = min(max(map(len, src)), max_len)
         refMaxLen = min(max(map(len, mt)), max_len)
 
-        src = pad_sequences(src, maxlen=srcMaxLen),
-        mt = pad_sequences(mt, maxlen=refMaxLen),
+        src = pad_sequences(src, maxlen=srcMaxLen)
+        mt = pad_sequences(mt, maxlen=refMaxLen)
 
         return model.predict([src, mt]).reshape((-1,))
 
@@ -448,7 +448,7 @@ def train(args):
 
 def getPredictor(args):
     return load_predictor(args.workspace_dir,
-                          savesModel=args.save_model,
+                          saveModel=args.save_model,
                           ensemble_count=args.ensemble_count,
                           max_len=args.max_len,
                           embedding_size=args.embedding_size,

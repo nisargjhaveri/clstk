@@ -25,7 +25,7 @@ def setupSubparsers(parser):
     rnnArgparser(subparsers.add_parser('rnn', **parent))
 
 
-def getModel(model):
+def _getModel(model):
     if model == "baseline":
         from summarizer.tqe import baseline
         return baseline
@@ -46,7 +46,18 @@ def train(args):
 
         shelf.close()
 
-    getModel(args.model).train(args)
+    _getModel(args.model).train(args)
+
+
+def getPredictor(modelPath):
+    if not modelPath:
+        raise ValueError("Model path must be specified to load predictor")
+
+    shelf = shelve.open(modelPath, 'r')
+    args = shelf['args']
+    shelf.close()
+
+    return _getModel(args.model).getPredictor(args)
 
 
 def baselineArgparser(parser):

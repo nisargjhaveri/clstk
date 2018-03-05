@@ -653,8 +653,9 @@ def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
 
     models = [model_multitask, model_predictor, model_estimator]
 
-    for model in models:
-        model.set_weights(shelf['weights'])
+    logger.info("Loading weights into models")
+    for model, weights in zip(models, shelf['weights']):
+        model.set_weights(weights)
 
     shelf.close()
 
@@ -672,8 +673,8 @@ def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
         srcMaxLen = min(max(map(len, src)), max_len)
         refMaxLen = min(max(map(len, mt)), max_len)
 
-        src = pad_sequences(src, maxlen=srcMaxLen),
-        mt = pad_sequences(mt, maxlen=refMaxLen),
+        src = pad_sequences(src, maxlen=srcMaxLen)
+        mt = pad_sequences(mt, maxlen=refMaxLen)
 
         return model_estimator.predict([src, mt]).reshape((-1,))
 
@@ -711,7 +712,7 @@ def train(args):
 
 def getPredictor(args):
     return load_predictor(args.workspace_dir,
-                          savesModel=args.save_model,
+                          saveModel=args.save_model,
                           ensemble_count=args.ensemble_count,
                           max_len=args.max_len,
                           embedding_size=args.embedding_size,
@@ -719,7 +720,4 @@ def getPredictor(args):
                           qualvec_size=args.qualvec_size,
                           maxout_size=args.maxout_size,
                           maxout_units=args.maxout_units,
-                          training_mode=_get_training_mode(args),
-                          predictor_model=args.predictor_model,
-                          predictor_data=args.predictor_data,
                           )
