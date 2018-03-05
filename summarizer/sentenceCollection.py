@@ -60,8 +60,13 @@ class SentenceCollection(object):
                                       Sentence.getTranslation,
                                       Sentence.setTranslationVector)
 
-    def translate(self, sourceLang, targetLang):
+    def translate(self, sourceLang, targetLang, replaceOriginal=False):
         text = "\n".join(map(Sentence.getText, self._sentences))
         translation, _ = translate(text, sourceLang, targetLang)
 
-        map(Sentence.setTranslation, self._sentences, translation.split("\n"))
+        if replaceOriginal:
+            setText = Sentence.setText
+        else:
+            setText = Sentence.setTranslation
+
+        map(setText, self._sentences, translation.split("\n"))

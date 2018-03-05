@@ -7,7 +7,7 @@ def getObjectives():
     return [
         ('coverage', 1.0, CoverageObjective),
         ('diversity', 6.0, DiversityRewardObjective),
-        ('tqe', 1.0, TranslationQualityObjective),
+        ('tqe', 0.0, TranslationQualityObjective),
     ]
 
 

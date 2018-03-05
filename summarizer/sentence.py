@@ -29,17 +29,12 @@ class Sentence(object):
     def setTranslation(self, translation):
         self._translation = translation
 
-        self._translationTokens = tokenize(self._translation)
-
     def getTranslation(self):
         # return " ".join(self._translationTokens)
         return self._translation
-
-    def getTranslationTokens(self):
-        return self._translationTokens
 
     def charCount(self):
         return len(self._translation)
 
     def tokenCount(self):
-        return len(self._translationTokens)
+        return len(self._translation.split())

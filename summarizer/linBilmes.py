@@ -57,7 +57,8 @@ def optimizeGreedy(sizeBudget, objective, corpus):
 
 def summarize(inDir, params):
     logger.info("Loading documents from %s", inDir)
-    c = Corpus(inDir).load(params)
+    c = Corpus(inDir).load(params, translate=True,
+                           replaceOriginal=params['earlyTranslate'])
 
     logger.info("Setting up summarizer")
     objective = AggregateObjective(params['objectives'])
@@ -78,6 +79,7 @@ def setupArgparse(parser):
             'size': (args.size, args.words),
             'sourceLang': args.source_lang,
             'targetLang': args.target_lang or args.source_lang,
+            'earlyTranslate': args.early_translate,
         }
 
         summary = summarize(args.source_directory, params)
@@ -103,6 +105,8 @@ def setupArgparse(parser):
                         metavar="lang", help='Two-letter language code to '
                         'generate cross-lingual summary. '
                         'Defaults to source language.')
+    parser.add_argument('--early-translate', action="store_true",
+                        help='First translate and then summarize.')
 
     objectives.utils.addObjectiveParams(parser)
 
