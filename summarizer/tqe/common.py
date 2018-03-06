@@ -61,7 +61,7 @@ class WordIndexTransformer(object):
 
 def _preprocessSentences(sentences, lower=True, tokenize=True):
     def _processSentence(sentece):
-        sentence = sentece.decode('utf-8').strip()
+        sentence = sentece.strip()
 
         if lower:
             sentence = sentence.lower()
@@ -76,7 +76,8 @@ def _preprocessSentences(sentences, lower=True, tokenize=True):
 
 def _loadSentences(filePath, lower=True, tokenize=True):
     with open(filePath) as lines:
-        sentences = _preprocessSentences(list(lines),
+        lines = map(lambda l: l.decode('utf-8'), list(lines))
+        sentences = _preprocessSentences(lines,
                                          lower=lower, tokenize=tokenize)
 
     return sentences
