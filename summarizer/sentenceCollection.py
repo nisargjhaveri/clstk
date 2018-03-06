@@ -64,9 +64,9 @@ class SentenceCollection(object):
         text = "\n".join(map(Sentence.getText, self._sentences))
         translation, _ = translate(text, sourceLang, targetLang)
 
-        if replaceOriginal:
-            setText = Sentence.setText
-        else:
-            setText = Sentence.setTranslation
+        translations = translation.split("\n")
 
-        map(setText, self._sentences, translation.split("\n"))
+        if replaceOriginal:
+            map(Sentence.setText, self._sentences, translations)
+
+        map(Sentence.setTranslation, self._sentences, translations)

@@ -23,14 +23,12 @@ def runSummarizer(inDir, outFile, summarizer, args):
         f.write(summary.getTargetSummary().encode('utf8'))
 
 
-def summarizeAll(docsDir, outDir, summarizer, args):
-    dirNames = os.walk(docsDir).next()[1]
-
+def summarizeAll(docNames, docsDir, outDir, summarizer, args):
     fs.ensureDir(outDir)
 
-    total = len(dirNames)
+    total = len(docNames)
 
-    for i, inDirName in enumerate(dirNames):
+    for i, inDirName in enumerate(docNames):
         inDir = os.path.join(docsDir, inDirName)
         outFile = os.path.join(outDir, inDirName)
 
@@ -53,12 +51,14 @@ def runRougeExternal(configFileName):
     rougeOutput.communicate()
 
 
-def getRougeScore(summariesDir, refsDir):
+def getAvailableReferences(refsDir):
+    return os.walk(refsDir).next()[1]
+
+
+def getRougeScore(summaryNames, summariesDir, refsDir):
     configFile = tempfile.NamedTemporaryFile(mode='w', suffix=".lst",
                                              delete=False)
     summaryRefsList = []
-
-    summaryNames = os.walk(summariesDir).next()[2]
 
     for summaryName in summaryNames:
         summaryPath = os.path.join(summariesDir, summaryName)
@@ -121,7 +121,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if not args.only_rouge:
-        summarizeAll(args.source_path, args.summaries_path, args.func, args)
+    docNames = getAvailableReferences(args.models_path)
 
-    getRougeScore(args.summaries_path, args.models_path)
+    if not args.only_rouge:
+        summarizeAll(docNames, args.source_path, args.summaries_path,
+                     args.func, args)
+
+    getRougeScore(docNames, args.summaries_path, args.models_path)

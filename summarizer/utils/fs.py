@@ -2,5 +2,8 @@ import os
 
 
 def ensureDir(dirname):
-    if not os.path.exists(dirname):
+    try:
         os.makedirs(dirname)
+    except OSError:
+        if not os.path.isdir(dirname):
+            raise

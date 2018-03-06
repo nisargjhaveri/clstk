@@ -65,10 +65,6 @@ def summarize(inDir, params):
 
     summary = optimizeGreedy(params["size"], objective, c)
 
-    if params['sourceLang'] != params['targetLang']:
-        logger.info("Translating summary")
-        summary.translate(params['sourceLang'], params['targetLang'])
-
     return summary
 
 
