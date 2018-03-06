@@ -159,31 +159,41 @@ def _translateText(text, source, target):
 def translate(text, source, target, sentencePerLine=True):
     def cacheKey(text):
         return "_".join([
-            text, source, target
+            text.strip(), source, target
         ]).encode('utf-8')
 
     cache = shelve.open('.translation-cache')
 
-    if cacheKey(text) in cache:
-        return cache[cacheKey(text)]
+    sentencesToTranslate = []
+    sourceSentences = text.split("\n")
 
-    translation, sentences = _translateText(text, source, target)
+    for sentence in sourceSentences:
+        if cacheKey(sentence) not in cache:
+            sentencesToTranslate.append(sentence)
 
-    if (sentencePerLine):
-        sentences = []
-        sourceSentences = text.split("\n")
-        targetSentences = translation.split("\n")
+    if len(sentencesToTranslate):
+        textToTranslate = "\n".join(sentencesToTranslate)
+        translation, sentences = _translateText(textToTranslate,
+                                                source, target)
 
-        if (len(sourceSentences) != len(targetSentences)):
+        translatedSentences = translation.split("\n")
+
+        if (len(sentencesToTranslate) != len(translatedSentences)):
             raise RuntimeError("GOOGLE_TRANSLATION_ERROR")
         else:
-            for i in xrange(len(sourceSentences)):
-                sentences.append({
-                    "source": sourceSentences[i].strip(),
-                    "target": targetSentences[i].strip()
-                })
+            for source, target in zip(sentencesToTranslate,
+                                      translatedSentences):
+                cache[cacheKey(source)] = target
 
-    cache[cacheKey(text)] = (translation, sentences)
+    sentences = []
+    for sentence in sourceSentences:
+        sentences.append({
+            "source": sentence.strip(),
+            "target": cache[cacheKey(sentence)]
+        })
+
+    translation = "\n".join(map(lambda s: s['target'], sentences))
+
     cache.close()
 
     return translation, sentences
