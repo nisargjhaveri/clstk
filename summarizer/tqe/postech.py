@@ -660,10 +660,6 @@ def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
     shelf.close()
 
     def predictor(src, mt):
-        if not isinstance(src, list):
-            src = [src]
-            mt = [mt]
-
         src = _preprocessSentences(src)
         mt = _preprocessSentences(mt)
 
