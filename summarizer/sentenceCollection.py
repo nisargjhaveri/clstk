@@ -26,7 +26,7 @@ class SentenceCollection(object):
     def getSentenceVectors(self):
         return np.array(map(Sentence.getVector, self._sentences))
 
-    def getTranslationSetenceVectors(self):
+    def getTranslationSentenceVectors(self):
         return np.array(map(Sentence.getTranslationVector, self._sentences))
 
     def _generateSentenceVectors(self, lang, getText, setVector):

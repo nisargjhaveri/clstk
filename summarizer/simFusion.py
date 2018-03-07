@@ -28,7 +28,7 @@ def summarize(inDir, params):
     np.fill_diagonal(M_en, 0)
 
     M_cn = cosine_similarity(
-        c.getTranslationSetenceVectors()
+        c.getTranslationSentenceVectors()
     )
     np.fill_diagonal(M_cn, 0)
 
