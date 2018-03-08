@@ -57,6 +57,9 @@ class CoverageObjective(Objective):
         self._similarities = sklearn.metrics.pairwise.cosine_similarity(
             corpus.getSentenceVectors()
         )
+        # + 0.5 * sklearn.metrics.pairwise.cosine_similarity(
+        #     corpus.getTranslationSentenceVectors()
+        # )
 
         self._corpusCoverage = map(
             lambda sI:

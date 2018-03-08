@@ -11,6 +11,12 @@ class SentenceCollection(object):
     def __init__(self):
         self._sentences = []
 
+    def setSourceLang(self, lang):
+        self.sourceLang = lang
+
+    def setTargetLang(self, lang):
+        self.targetLang = lang
+
     def addSentence(self, sentence):
         if not isinstance(sentence, Sentence):
             raise RuntimeError("Expected an object of Sentence class")
@@ -32,7 +38,7 @@ class SentenceCollection(object):
     def _generateSentenceVectors(self, lang, getText, setVector):
         def _tokenizeSentence(sentenceText):
             tokens = map(nlp.getStemmer(),
-                         nlp.getTokenizer()(sentenceText.lower())
+                         nlp.getTokenizer(lang)(sentenceText.lower())
                          )
 
             return tokens
@@ -40,7 +46,7 @@ class SentenceCollection(object):
         sentenceVectorizer = sklearn.feature_extraction.text.TfidfVectorizer(
                                 preprocessor=getText,
                                 tokenizer=_tokenizeSentence,
-                                stop_words=nlp.getStopwords(),
+                                stop_words=nlp.getStopwords(lang),
                                 ngram_range=(1, 2)
                             )
 
@@ -50,13 +56,13 @@ class SentenceCollection(object):
 
         map(setVector, self._sentences, sentenceVectors)
 
-    def generateSentenceVectors(self, sourceLang):
-        self._generateSentenceVectors(sourceLang,
+    def generateSentenceVectors(self):
+        self._generateSentenceVectors(self.sourceLang,
                                       Sentence.getText,
                                       Sentence.setVector)
 
-    def generateTranslationSentenceVectors(self, targetLang):
-        self._generateSentenceVectors(targetLang,
+    def generateTranslationSentenceVectors(self):
+        self._generateSentenceVectors(self.targetLang,
                                       Sentence.getTranslation,
                                       Sentence.setTranslationVector)
 

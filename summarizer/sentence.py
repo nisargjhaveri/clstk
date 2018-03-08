@@ -1,8 +1,3 @@
-from utils import nlp
-
-tokenize = nlp.getTokenizer()
-
-
 class Sentence(object):
     def __init__(self, sentenceText):
         self.setText(sentenceText)

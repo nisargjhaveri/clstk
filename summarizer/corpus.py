@@ -23,6 +23,9 @@ class Corpus(SentenceCollection):
         )
 
     def load(self, params, translate=False, replaceOriginal=False):
+        self.setSourceLang(params['sourceLang'])
+        self.setTargetLang(params['targetLang'])
+
         # load corpus
         files = map(lambda f: os.path.join(self._dirname, f),
                     os.walk(self._dirname).next()[2])
@@ -40,14 +43,16 @@ class Corpus(SentenceCollection):
         self.addSentences(map(Sentence, set(sentences)))
 
         if translate:
-            if params['sourceLang'] != params['targetLang']:
-                self.translate(params['sourceLang'],
-                               params['targetLang'],
+            if self.sourceLang != self.targetLang:
+                self.translate(self.sourceLang,
+                               self.targetLang,
                                replaceOriginal)
 
-            self.generateTranslationSentenceVectors(params['sourceLang'])
+            if replaceOriginal:
+                self.setSourceLang(self.targetLang)
 
-        # preprocess corpus
-        self.generateSentenceVectors(params['sourceLang'])
+            self.generateTranslationSentenceVectors()
+
+        self.generateSentenceVectors()
 
         return self

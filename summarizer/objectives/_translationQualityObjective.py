@@ -30,7 +30,9 @@ class TranslationQualityObjective(Objective):
 
     def _transformSentenceScores(self):
         for sent in self.sentenceScoresMap:
-            self.sentenceScoresMap[sent] = 1 - self.sentenceScoresMap[sent]
+            self.sentenceScoresMap[sent] = (
+                (1 - self.sentenceScoresMap[sent]) ** 4
+            )
 
     def setCorpus(self, corpus):
         logger.info("Processing documents for translation quality objective")
@@ -40,11 +42,11 @@ class TranslationQualityObjective(Objective):
         self._corpusLenght = len(self._corpusSentenceList)
 
         def _prepareSrcSentence(sentence):
-            tokenize = nlp.getTokenizer()
+            tokenize = nlp.getTokenizer(corpus.sourceLang)
             return " ".join(tokenize(sentence.getText()))
 
         def _prepareMtSentence(sentence):
-            tokenize = nlp.getTokenizer()
+            tokenize = nlp.getTokenizer(corpus.targetLang)
             return " ".join(tokenize(sentence.getTranslation()))
 
         def getCacheKey(src, mt):
