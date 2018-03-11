@@ -11,11 +11,11 @@ from keras.callbacks import EarlyStopping
 
 import keras.backend as K
 
-from keras.preprocessing.sequence import pad_sequences
 from keras.utils.generic_utils import CustomObjectScope
 
 from .common import WordIndexTransformer, _loadData, _preprocessSentences
 from .common import _printModelSummary, TimeDistributedSequential
+from .common import pad_sequences, getBatchGenerator
 from .common import pearsonr
 from .common import get_fastText_embeddings
 
@@ -339,20 +339,52 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                               **kwargs)
 
     logger.info("Training model")
-    model.fit([
-            X_train['src'],
-            X_train['mt']
-        ], [
-            y_train
-        ],
-        batch_size=batchSize,
+    # model.fit([
+    #         X_train['src'],
+    #         X_train['mt']
+    #     ], [
+    #         y_train
+    #     ],
+    #     batch_size=batchSize,
+    #     epochs=epochs,
+    #     validation_data=([
+    #             X_dev['src'],
+    #             X_dev['mt']
+    #         ], [
+    #             y_dev
+    #         ]
+    #     ),
+    #     callbacks=[
+    #         EarlyStopping(monitor="val_pearsonr", patience=2, mode="max"),
+    #     ],
+    #     verbose=2
+    # )
+    #
+    # print ([
+    #             X_train['src'],
+    #             X_train['mt']
+    #         ], [
+    #             y_train
+    #         ])
+
+    model.fit_generator(getBatchGenerator([
+                X_train['src'],
+                X_train['mt']
+            ], [
+                y_train
+            ],
+            key=lambda x: "_".join(map(str, map(len, x))),
+            batch_size=batchSize
+        ),
         epochs=epochs,
-        validation_data=([
+        shuffle=True,
+        validation_data=getBatchGenerator([
                 X_dev['src'],
                 X_dev['mt']
             ], [
                 y_dev
-            ]
+            ],
+            key=lambda x: "_".join(map(str, map(len, x)))
         ),
         callbacks=[
             EarlyStopping(monitor="val_pearsonr", patience=2, mode="max"),
@@ -374,16 +406,26 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
         shelf.close()
 
     logger.info("Evaluating on development data of size %d" % len(y_dev))
-    utils.evaluate(model.predict([
-        X_dev['src'],
-        X_dev['mt']
-    ]).reshape((-1,)), y_dev)
+    dev_batches = getBatchGenerator([
+            X_dev['src'],
+            X_dev['mt']
+        ],
+        key=lambda x: "_".join(map(str, map(len, x)))
+    )
+    y_dev = dev_batches.align(y_dev)
+    utils.evaluate(model.predict_generator(dev_batches).reshape((-1,)),
+                   y_dev)
 
     logger.info("Evaluating on test data of size %d" % len(y_test))
-    utils.evaluate(model.predict([
-        X_test['src'],
-        X_test['mt']
-    ]).reshape((-1,)), y_test)
+    test_batches = getBatchGenerator([
+            X_test['src'],
+            X_test['mt']
+        ],
+        key=lambda x: "_".join(map(str, map(len, x)))
+    )
+    y_test = test_batches.align(y_test)
+    utils.evaluate(model.predict_generator(test_batches).reshape((-1,)),
+                   y_test)
 
 
 def load_predictor(workspaceDir, saveModel, max_len, **kwargs):

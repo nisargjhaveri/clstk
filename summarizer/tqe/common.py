@@ -162,6 +162,68 @@ def _loadData(fileBasename, devFileSuffix=None, testFileSuffix=None,
     return X_train, y_train, X_dev, y_dev, X_test, y_test
 
 
+def pad_sequences(sequences, maxlen=None, **kwargs):
+    if maxlen <= 0:
+        return sequences
+    else:
+        from keras.preprocessing.sequence import pad_sequences
+        return pad_sequences(sequences, maxlen, **kwargs)
+
+
+def getBatchGenerator(*args, **kwargs):
+    """
+    X is assumed to be list of inputs
+    y is assumed to be list of outputs
+    """
+    from keras.utils import Sequence
+
+    class BatchGeneratorSequence(Sequence):
+        def __init__(self, X, y=None, key=lambda x: x, batch_size=None):
+            self.batch_size = batch_size
+            self.emit_y = bool(y)
+
+            groupingKyes = map(key, zip(*X))
+
+            self.alignment = []
+            groups = {}
+            for i, key in enumerate(groupingKyes):
+                groups.setdefault(key, []).append(i)
+                self.alignment.append(i)
+
+            self.batches = []
+            for group in groups.values():
+                if not batch_size:
+                    X_batches = [[np.array(x_i[group].tolist())
+                                  for x_i in X]]
+                    y_batches = [[np.array(y_i[group].tolist())
+                                  for y_i in y] if y else None]
+                else:
+                    num_batches = int(
+                                np.ceil(len(group) / float(self.batch_size))
+                            )
+                    X_batches = [[np.array(
+                                        x_i[group[i:i + batch_size]].tolist())
+                                  for x_i in X]
+                                 for i in xrange(0, num_batches, batch_size)]
+                    y_batches = [[np.array(
+                                        y_i[group[i:i + batch_size]].tolist())
+                                  for y_i in y] if y else None
+                                 for i in xrange(0, num_batches, batch_size)]
+                self.batches.extend(zip(X_batches, y_batches))
+
+        def __len__(self):
+            # print len(self.batches)
+            return len(self.batches)
+
+        def __getitem__(self, idx):
+            return self.batches[idx] if self.emit_y else self.batches[idx][0]
+
+        def align(self, y):
+            return y[self.alignment]
+
+    return BatchGeneratorSequence(*args, **kwargs)
+
+
 def get_fastText_embeddings(fastText_file, vocabTransformer, embedding_size):
     import fastText
     ft_model = fastText.load_model(fastText_file)
