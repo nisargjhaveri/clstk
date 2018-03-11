@@ -198,17 +198,15 @@ def getBatchGenerator(*args, **kwargs):
                     y_batches = [[np.array(y_i[group].tolist())
                                   for y_i in y] if y else None]
                 else:
-                    num_batches = int(
-                                np.ceil(len(group) / float(self.batch_size))
-                            )
+                    num_samples = len(group)
                     X_batches = [[np.array(
                                         x_i[group[i:i + batch_size]].tolist())
                                   for x_i in X]
-                                 for i in xrange(0, num_batches, batch_size)]
+                                 for i in xrange(0, num_samples, batch_size)]
                     y_batches = [[np.array(
                                         y_i[group[i:i + batch_size]].tolist())
                                   for y_i in y] if y else None
-                                 for i in xrange(0, num_batches, batch_size)]
+                                 for i in xrange(0, num_samples, batch_size)]
                 self.batches.extend(zip(X_batches, y_batches))
 
         def __len__(self):
