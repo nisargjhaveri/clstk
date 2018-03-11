@@ -359,13 +359,6 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
     #     ],
     #     verbose=2
     # )
-    #
-    # print ([
-    #             X_train['src'],
-    #             X_train['mt']
-    #         ], [
-    #             y_train
-    #         ])
 
     model.fit_generator(getBatchGenerator([
                 X_train['src'],

@@ -316,3 +316,70 @@ def pearsonr(y_true, y_pred):
     #     t_squared = r*r * (df / ((1.0 - r) * (1.0 + r)))
     #     prob = betai(0.5*df, 0.5, df / (df + t_squared))
     return r
+
+
+def getStatefulPearsonr():
+    from keras.layers import Layer
+    import keras.backend as K
+
+    class StatefulPearsonr(Layer):
+        def __init__(self, **kwargs):
+            super(StatefulPearsonr, self).__init__(**kwargs)
+
+            self.n = K.variable(value=0, dtype='int')
+            self.sum_xy = K.variable(value=0, dtype='float')
+            self.sum_x = K.variable(value=0, dtype='float')
+            self.sum_y = K.variable(value=0, dtype='float')
+            self.sum_x_2 = K.variable(value=0, dtype='float')
+            self.sum_y_2 = K.variable(value=0, dtype='float')
+
+        def reset_states(self):
+            K.set_value(self.n, 0)
+            K.set_value(self.sum_xy, 0)
+            K.set_value(self.sum_x, 0)
+            K.set_value(self.sum_y, 0)
+            K.set_value(self.sum_x_2, 0)
+            K.set_value(self.sum_y_2, 0)
+
+        def __call__(self, y_true, y_pred):
+            x = y_true
+            y = y_pred
+            # n = x.shape[0]
+            mx = K.mean(x)
+            my = K.mean(y)
+            xm, ym = x - mx, y - my
+            r_num = K.sum(xm * ym)
+            r_den = K.sqrt(K.sum(xm * xm) * K.sum(ym * ym))
+            r = r_num / r_den
+
+            n = self.n + K.shape(x)[0]
+            sum_xy = self.sum_xy + K.sum(x * y)
+            sum_x = self.sum_x + K.sum(x)
+            sum_y = self.sum_y + K.sum(y)
+            sum_x_2 = self.sum_x_2 + K.sum(x * x)
+            sum_y_2 = self.sum_y_2 + K.sum(y * y)
+
+            self.add_update(K.update_add(self.n, K.shape(x)[0]),
+                            inputs=[y_true, y_pred])
+            self.add_update(K.update_add(self.sum_xy, K.sum(x * y)),
+                            inputs=[y_true, y_pred])
+            self.add_update(K.update_add(self.sum_x, K.sum(x)),
+                            inputs=[y_true, y_pred])
+            self.add_update(K.update_add(self.sum_y, K.sum(y)),
+                            inputs=[y_true, y_pred])
+            self.add_update(K.update_add(self.sum_x_2, K.sum(x * x)),
+                            inputs=[y_true, y_pred])
+            self.add_update(K.update_add(self.sum_y_2, K.sum(y * y)),
+                            inputs=[y_true, y_pred])
+
+            r_num = (n * sum_xy) - (sum_x * sum_y)
+            r_den = (K.sqrt((n * sum_x_2) - (sum_x * sum_x))
+                     * K.sqrt((n * sum_y_2) - (sum_y * sum_y)))
+            r = r_num / r_den
+
+            # Presumably, if abs(r) > 1, then it is only some small artifact of
+            # floating point arithmetic.
+            r = K.clip(r, -1.0, 1.0)
+            return r
+
+    return StatefulPearsonr()
