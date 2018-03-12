@@ -180,44 +180,47 @@ def getBatchGenerator(*args, **kwargs):
     class BatchGeneratorSequence(Sequence):
         def __init__(self, X, y=None, key=lambda x: x, batch_size=None):
             self.batch_size = batch_size
-            self.emit_y = bool(y)
+            self.X = X
+            self.y = y
 
             groupingKyes = map(key, zip(*X))
 
-            self.alignment = []
             groups = {}
             for i, key in enumerate(groupingKyes):
                 groups.setdefault(key, []).append(i)
-                self.alignment.append(i)
 
             self.batches = []
             for group in groups.values():
-                if not batch_size:
-                    X_batches = [[np.array(x_i[group].tolist())
-                                  for x_i in X]]
-                    y_batches = [[np.array(y_i[group].tolist())
-                                  for y_i in y] if y else None]
-                else:
-                    num_samples = len(group)
-                    X_batches = [[np.array(
-                                        x_i[group[i:i + batch_size]].tolist())
-                                  for x_i in X]
-                                 for i in xrange(0, num_samples, batch_size)]
-                    y_batches = [[np.array(
-                                        y_i[group[i:i + batch_size]].tolist())
-                                  for y_i in y] if y else None
-                                 for i in xrange(0, num_samples, batch_size)]
-                self.batches.extend(zip(X_batches, y_batches))
+                num_samples = len(group)
+                batch_size = num_samples if not batch_size else batch_size
+
+                batches = [
+                    group[i:i + batch_size]
+                    for i in xrange(0, num_samples, batch_size)
+                ]
+
+                self.batches.extend(batches)
 
         def __len__(self):
             # print len(self.batches)
             return len(self.batches)
 
         def __getitem__(self, idx):
-            return self.batches[idx] if self.emit_y else self.batches[idx][0]
+            batch_idx = self.batches[idx]
+
+            batch = [np.array(x_i[batch_idx].tolist()) for x_i in self.X]
+
+            if self.y:
+                batch = (
+                    batch,
+                    [np.array(y_i[batch_idx].tolist()) for y_i in self.y]
+                )
+
+            return batch
 
         def align(self, y):
-            return y[self.alignment]
+            alignment = sum(self.batches, [])
+            return y[alignment]
 
     return BatchGeneratorSequence(*args, **kwargs)
 
