@@ -444,6 +444,7 @@ def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
     shelf.close()
 
     def predictor(src, mt, y_test=None):
+        logger.info("Preparing data for prediction")
         src = _preprocessSentences(src)
         mt = _preprocessSentences(mt)
 
@@ -456,6 +457,7 @@ def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
         src = pad_sequences(src, maxlen=srcMaxLen, num_buckets=num_buckets)
         mt = pad_sequences(mt, maxlen=refMaxLen, num_buckets=num_buckets)
 
+        logger.info("Predicting")
         predict_batches = getBatchGenerator(
             [src, mt],
             key=lambda x: "_".join(map(str, map(len, x)))
