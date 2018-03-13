@@ -162,12 +162,23 @@ def _loadData(fileBasename, devFileSuffix=None, testFileSuffix=None,
     return X_train, y_train, X_dev, y_dev, X_test, y_test
 
 
-def pad_sequences(sequences, maxlen=None, **kwargs):
-    if maxlen <= 0:
-        return sequences
-    else:
-        from keras.preprocessing.sequence import pad_sequences
+def pad_sequences(sequences, maxlen, num_buckets=1, **kwargs):
+    from keras.preprocessing.sequence import pad_sequences
+    if num_buckets <= 1:
         return pad_sequences(sequences, maxlen, **kwargs)
+    else:
+        bucket_size = maxlen / num_buckets
+
+        def get_padlen(s):
+            return min(
+                    int(np.ceil(len(s) / float(bucket_size))) * bucket_size,
+                    maxlen
+                   )
+
+        return np.array(
+                map(lambda s: pad_sequences([s], get_padlen(s), **kwargs)[0],
+                    sequences)
+                )
 
 
 def getBatchGenerator(*args, **kwargs):

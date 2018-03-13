@@ -26,7 +26,7 @@ logger = logging.getLogger("rnn")
 
 def _prepareInput(workspaceDir, modelName,
                   srcVocabTransformer, refVocabTransformer,
-                  max_len,
+                  max_len, num_buckets,
                   devFileSuffix=None, testFileSuffix=None,
                   ):
     logger.info("Loading data")
@@ -69,22 +69,23 @@ def _prepareInput(workspaceDir, modelName,
     refMaxLen = min(getMaxLen([mtSentencesTrain, mtSentencesDev,
                                refSentencesTrain, refSentencesDev]), max_len)
 
+    pad_args = {'num_buckets': num_buckets}
     X_train = {
-        "src": pad_sequences(srcSentencesTrain, maxlen=srcMaxLen),
-        "mt": pad_sequences(mtSentencesTrain, maxlen=refMaxLen),
-        "ref": pad_sequences(refSentencesTrain, maxlen=refMaxLen)
+        "src": pad_sequences(srcSentencesTrain, maxlen=srcMaxLen, **pad_args),
+        "mt": pad_sequences(mtSentencesTrain, maxlen=refMaxLen, **pad_args),
+        "ref": pad_sequences(refSentencesTrain, maxlen=refMaxLen, **pad_args)
     }
 
     X_dev = {
-        "src": pad_sequences(srcSentencesDev, maxlen=srcMaxLen),
-        "mt": pad_sequences(mtSentencesDev, maxlen=refMaxLen),
-        "ref": pad_sequences(refSentencesDev, maxlen=refMaxLen)
+        "src": pad_sequences(srcSentencesDev, maxlen=srcMaxLen, **pad_args),
+        "mt": pad_sequences(mtSentencesDev, maxlen=refMaxLen, **pad_args),
+        "ref": pad_sequences(refSentencesDev, maxlen=refMaxLen, **pad_args)
     }
 
     X_test = {
-        "src": pad_sequences(srcSentencesTest, maxlen=srcMaxLen),
-        "mt": pad_sequences(mtSentencesTest, maxlen=refMaxLen),
-        "ref": pad_sequences(refSentencesTest, maxlen=refMaxLen)
+        "src": pad_sequences(srcSentencesTest, maxlen=srcMaxLen, **pad_args),
+        "mt": pad_sequences(mtSentencesTest, maxlen=refMaxLen, **pad_args),
+        "ref": pad_sequences(refSentencesTest, maxlen=refMaxLen, **pad_args)
     }
 
     return X_train, y_train, X_dev, y_dev, X_test, y_test
@@ -308,7 +309,7 @@ def getEnsembledModel(ensemble_count, **kwargs):
 
 def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                 saveModel,
-                batchSize, epochs, max_len, vocab_size,
+                batchSize, epochs, max_len, num_buckets, vocab_size,
                 **kwargs):
     logger.info("initializing TQE training")
 
@@ -321,6 +322,7 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                                         srcVocabTransformer,
                                         refVocabTransformer,
                                         max_len=max_len,
+                                        num_buckets=num_buckets,
                                         devFileSuffix=devFileSuffix,
                                         testFileSuffix=testFileSuffix,
                                         )
@@ -421,7 +423,7 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                    y_test)
 
 
-def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
+def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
     shelf = shelve.open(os.path.join(workspaceDir, "model." + saveModel), 'r')
 
     srcVocabTransformer = shelf['params']['srcVocabTransformer']
@@ -448,8 +450,8 @@ def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
         srcMaxLen = min(max(map(len, src)), max_len)
         refMaxLen = min(max(map(len, mt)), max_len)
 
-        src = pad_sequences(src, maxlen=srcMaxLen)
-        mt = pad_sequences(mt, maxlen=refMaxLen)
+        src = pad_sequences(src, maxlen=srcMaxLen, num_buckets=num_buckets)
+        mt = pad_sequences(mt, maxlen=refMaxLen, num_buckets=num_buckets)
 
         return model.predict([src, mt]).reshape((-1,))
 
@@ -467,6 +469,7 @@ def train(args):
                 ensemble_count=args.ensemble_count,
                 vocab_size=args.vocab_size,
                 max_len=args.max_len,
+                num_buckets=args.buckets,
                 embedding_size=args.embedding_size,
                 gru_size=args.gru_size,
                 src_fastText=args.source_embeddings,
@@ -482,6 +485,7 @@ def getPredictor(args):
                           saveModel=args.save_model,
                           ensemble_count=args.ensemble_count,
                           max_len=args.max_len,
+                          num_buckets=args.buckets,
                           embedding_size=args.embedding_size,
                           gru_size=args.gru_size,
                           src_fastText=args.source_embeddings,
