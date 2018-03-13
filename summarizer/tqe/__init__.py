@@ -16,8 +16,17 @@ def setupSubparsers(parser):
     common_parser.add_argument('--test-file-suffix', type=str, default=None,
                                help='Suffix for test files')
 
-    subparsers = parser.add_subparsers(title='models', dest="model",
-                                       description='TQE model to train')
+    subparsers = parser.add_subparsers(title='subcommands', dest="model")
+
+    predict_parser = subparsers.add_parser('predict')
+    predict_parser.add_argument('workspace_dir',
+                                help='Directory containing prepared files')
+    predict_parser.add_argument('model_name', type=str,
+                                help="Basepath of saved model")
+    predict_parser.add_argument('data_name',
+                                help='Identifier for prepared files')
+    predict_parser.add_argument('--evaluate', action='store_true',
+                                help="Evaluate along with prediction.")
 
     parent = {'parents': [common_parser]}
     baselineArgparser(subparsers.add_parser('baseline', **parent))
@@ -35,6 +44,31 @@ def _getModel(model):
     elif model == "rnn":
         from summarizer.tqe import rnn
         return rnn
+
+
+def run(args):
+    if (args.model == 'predict'):
+        import numpy as np
+
+        fileBasename = os.path.join(args.workspace_dir,
+                                    "tqe." + args.data_name)
+
+        srcSentencesPath = fileBasename + ".src"
+        mtSentencesPath = fileBasename + ".mt"
+
+        with open(srcSentencesPath) as lines:
+            src = map(lambda l: l.decode('utf-8'), list(lines))
+        with open(mtSentencesPath) as lines:
+            mt = map(lambda l: l.decode('utf-8'), list(lines))
+
+        y = None
+        if args.evaluate:
+            targetPath = fileBasename + ".hter"
+            y = np.clip(np.loadtxt(targetPath), 0, 1)
+
+        print list(getPredictor(args.model_path)(src, mt, y))
+    else:
+        train(args)
 
 
 def train(args):

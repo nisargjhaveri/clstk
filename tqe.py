@@ -3,7 +3,7 @@ import logging
 
 from summarizer.utils import colors
 
-from summarizer.tqe import setupSubparsers, train
+from summarizer.tqe import setupSubparsers, run
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -30,4 +30,4 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-    train(args)
+    run(args)

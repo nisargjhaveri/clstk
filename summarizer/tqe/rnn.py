@@ -442,7 +442,7 @@ def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
 
     shelf.close()
 
-    def predictor(src, mt):
+    def predictor(src, mt, y_test=None):
         src = _preprocessSentences(src)
         mt = _preprocessSentences(mt)
 
@@ -455,10 +455,20 @@ def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
         src = pad_sequences(src, maxlen=srcMaxLen, num_buckets=num_buckets)
         mt = pad_sequences(mt, maxlen=refMaxLen, num_buckets=num_buckets)
 
-        return model.predict_generator(getBatchGenerator(
+        predict_batches = getBatchGenerator(
             [src, mt],
             key=lambda x: "_".join(map(str, map(len, x)))
-        )).reshape((-1,))
+        )
+
+        predicted = model.predict_generator(predict_batches).reshape((-1,))
+
+        predicted = predict_batches.alignOriginal(predicted)
+
+        if y_test:
+            utils.evaluate(predicted,
+                           y_test)
+
+        return predicted
 
     return predictor
 

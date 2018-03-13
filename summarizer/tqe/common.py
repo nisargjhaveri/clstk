@@ -233,6 +233,14 @@ def getBatchGenerator(*args, **kwargs):
             alignment = sum(self.batches, [])
             return y[alignment]
 
+        def alignOriginal(self, y):
+            alignment = sum(self.batches, [])
+            y_aligned = y[:]
+            for i, y_curr in zip(alignment, y):
+                y_aligned[i] = y_curr
+
+            return y_aligned
+
     return BatchGeneratorSequence(*args, **kwargs)
 
 
