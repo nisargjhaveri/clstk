@@ -27,6 +27,8 @@ def setupSubparsers(parser):
                                 help='Identifier for prepared files')
     predict_parser.add_argument('--evaluate', action='store_true',
                                 help="Evaluate along with prediction.")
+    predict_parser.add_argument('--print-result', action='store_true',
+                                help="Print result")
 
     parent = {'parents': [common_parser]}
     baselineArgparser(subparsers.add_parser('baseline', **parent))
@@ -66,7 +68,11 @@ def run(args):
             targetPath = fileBasename + ".hter"
             y = np.clip(np.loadtxt(targetPath), 0, 1)
 
-        print list(getPredictor(args.model_path)(src, mt, y))
+        modelPath = os.path.join(args.workspace_dir, args.model_name)
+        predicted = getPredictor(modelPath)(src, mt, y)
+
+        if args.print_result:
+            print list(predicted)
     else:
         train(args)
 

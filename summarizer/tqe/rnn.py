@@ -464,7 +464,7 @@ def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
 
         predicted = predict_batches.alignOriginal(predicted)
 
-        if y_test:
+        if y_test is not None:
             utils.evaluate(predicted,
                            y_test)
 
