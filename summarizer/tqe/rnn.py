@@ -438,6 +438,7 @@ def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
                               refVocabTransformer=refVocabTransformer,
                               **kwargs)
 
+    logger.info("Loading weights into model")
     model.set_weights(shelf['weights'])
 
     shelf.close()
@@ -465,6 +466,7 @@ def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
         predicted = predict_batches.alignOriginal(predicted)
 
         if y_test is not None:
+            logger.info("Evaluating on test data of size %d" % len(y_test))
             utils.evaluate(predicted,
                            y_test)
 
