@@ -307,7 +307,7 @@ def pearsonr(y_true, y_pred):
     xm, ym = x - mx, y - my
     r_num = K.sum(xm * ym)
     r_den = K.sqrt(K.sum(xm * xm) * K.sum(ym * ym))
-    r = r_num / r_den
+    r = K.switch(K.not_equal(r_den, 0), r_num / r_den, 0)
 
     # Presumably, if abs(r) > 1, then it is only some small artifact of
     # floating point arithmetic.
