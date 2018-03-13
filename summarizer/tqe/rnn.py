@@ -455,7 +455,10 @@ def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
         src = pad_sequences(src, maxlen=srcMaxLen, num_buckets=num_buckets)
         mt = pad_sequences(mt, maxlen=refMaxLen, num_buckets=num_buckets)
 
-        return model.predict([src, mt]).reshape((-1,))
+        return model.predict(getBatchGenerator(
+            [src, mt],
+            key=lambda x: "_".join(map(str, map(len, x)))
+        )).reshape((-1,))
 
     return predictor
 
