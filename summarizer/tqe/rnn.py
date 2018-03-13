@@ -190,6 +190,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                     name="encoder"
             )(src_embedding)
 
+    return_sequence = (use_estimator or summary_attention)
     if attention:
         attention_states = TimeDistributedSequential(
                                 [Dense(gru_size, name="attention_state")],
@@ -199,7 +200,8 @@ def getModel(srcVocabTransformer, refVocabTransformer,
         with CustomObjectScope({'AttentionGRUCell': AttentionGRUCell}):
             decoder = Bidirectional(
                         RNN(AttentionGRUCell(gru_size),
-                            return_sequences=True, return_state=True),
+                            return_sequences=return_sequence,
+                            return_state=return_sequence),
                         name="decoder"
                     )(
                       ref_embedding,
@@ -209,8 +211,8 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     else:
         decoder = Bidirectional(
                     GRU(gru_size,
-                        return_sequences=(use_estimator or summary_attention),
-                        return_state=(use_estimator or summary_attention)),
+                        return_sequences=return_sequence,
+                        return_state=return_sequence),
                     name="decoder"
                 )(
                   ref_embedding,
