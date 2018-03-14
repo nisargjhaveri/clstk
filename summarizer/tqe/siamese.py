@@ -103,7 +103,8 @@ def getSentenceEncoder(vocabTransformer,
     embedding_kwargs = {}
 
     if fastText:
-        logger.info("Loading fastText embeddings for source language")
+        if verbose:
+            logger.info("Loading fastText embeddings from: " + fastText)
         embedding_kwargs['weights'] = [get_fastText_embeddings(
                                 fastText,
                                 vocabTransformer,
