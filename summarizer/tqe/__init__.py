@@ -200,3 +200,5 @@ def siameseArgparser(parser):
                         help='Size of GRU')
     parser.add_argument('-v', '--vocab-size', type=int, default=40000,
                         help='Maximum vocab size')
+    parser.add_argument('--with-attention', action="store_true",
+                        help='Add attention in decoder')

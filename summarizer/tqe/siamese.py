@@ -5,17 +5,17 @@ from . import utils
 
 from keras.layers import dot, average
 from keras.layers import Input, Embedding
-# from keras.layers import Dense, Activation, Lambda
+from keras.layers import Dense, Activation, Lambda
 from keras.layers import GRU, Bidirectional
 from keras.models import Model
 from keras.callbacks import EarlyStopping
 
-# import keras.backend as K
+import keras.backend as K
 
 # from keras.utils.generic_utils import CustomObjectScope
 
 from .common import WordIndexTransformer, _loadData
-from .common import _printModelSummary
+from .common import _printModelSummary, TimeDistributedSequential
 from .common import pad_sequences, getBatchGenerator
 from .common import pearsonr
 from .common import get_fastText_embeddings
@@ -95,6 +95,7 @@ def _prepareInput(workspaceDir, modelName,
 def getSentenceEncoder(vocabTransformer,
                        embedding_size, gru_size,
                        fastText,
+                       attention,
                        model_inputs, verbose,
                        ):
     vocab_size = vocabTransformer.vocab_size()
@@ -122,9 +123,33 @@ def getSentenceEncoder(vocabTransformer,
                         **embedding_kwargs)(input)
 
     encoder = Bidirectional(
-                    GRU(gru_size),
+                    GRU(gru_size, return_sequences=attention),
                     name="encoder"
             )(src_embedding)
+
+    if attention:
+        attention_weights = TimeDistributedSequential([
+            Dense(gru_size, activation="tanh"),
+            Dense(1, name="attention_weights"),
+        ], encoder)
+
+        # attention_weights = Reshape((-1,))(attention_weights)
+        attention_weights = Lambda(
+                    lambda x: K.reshape(x, (x.shape[0], -1,)),
+                    output_shape=lambda input_shape: input_shape[:-1],
+                    mask=lambda inputs, mask: mask,
+                    name="reshape"
+                    )(attention_weights)
+
+        attention_weights = Activation(
+                                "softmax",
+                                name="attention_softmax"
+                            )(attention_weights)
+
+        encoder = dot([attention_weights, encoder],
+                      axes=(1, 1),
+                      name="summary"
+                      )
 
     sentence_encoder = Model(inputs=input, outputs=encoder)
 
@@ -135,9 +160,9 @@ def getSentenceEncoder(vocabTransformer,
 
 
 def getModel(srcVocabTransformer, refVocabTransformer,
-             embedding_size, gru_size,
              src_fastText, ref_fastText,
              model_inputs=None, verbose=False,
+             **kwargs
              ):
     if verbose:
         logger.info("Creating model")
@@ -149,18 +174,16 @@ def getModel(srcVocabTransformer, refVocabTransformer,
         ref_input = Input(shape=(None, ))
 
     src_sentence_enc = getSentenceEncoder(vocabTransformer=srcVocabTransformer,
-                                          embedding_size=embedding_size,
-                                          gru_size=gru_size,
                                           fastText=src_fastText,
                                           model_inputs=[src_input],
-                                          verbose=verbose)(src_input)
+                                          verbose=verbose,
+                                          **kwargs)(src_input)
 
     ref_sentence_enc = getSentenceEncoder(vocabTransformer=refVocabTransformer,
-                                          embedding_size=embedding_size,
-                                          gru_size=gru_size,
                                           fastText=ref_fastText,
                                           model_inputs=[ref_input],
-                                          verbose=verbose)(ref_input)
+                                          verbose=verbose,
+                                          **kwargs)(ref_input)
 
     quality = dot([src_sentence_enc, ref_sentence_enc],
                   axes=-1,
@@ -338,6 +361,7 @@ def train(args):
                 gru_size=args.gru_size,
                 src_fastText=args.source_embeddings,
                 ref_fastText=args.target_embeddings,
+                attention=args.with_attention,
                 )
 
 
@@ -351,4 +375,5 @@ def getPredictor(args):
                           gru_size=args.gru_size,
                           src_fastText=args.source_embeddings,
                           ref_fastText=args.target_embeddings,
+                          attention=args.with_attention,
                           )
