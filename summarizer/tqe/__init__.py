@@ -34,6 +34,7 @@ def setupSubparsers(parser):
     baselineArgparser(subparsers.add_parser('baseline', **parent))
     postechArgparser(subparsers.add_parser('postech', **parent))
     rnnArgparser(subparsers.add_parser('rnn', **parent))
+    siameseArgparser(subparsers.add_parser('siamese', **parent))
 
 
 def _getModel(model):
@@ -46,6 +47,9 @@ def _getModel(model):
     elif model == "rnn":
         from summarizer.tqe import rnn
         return rnn
+    elif model == "siamese":
+        from summarizer.tqe import siamese
+        return siamese
 
 
 def run(args):
@@ -173,3 +177,26 @@ def rnnArgparser(parser):
                         help='Get quality summary using attention')
     parser.add_argument('--no-estimator', action="store_true",
                         help='Don\'t use separate estimator layer')
+
+
+def siameseArgparser(parser):
+    parser.add_argument('-b', '--batch-size', type=int, default=50,
+                        help='Batch size')
+    parser.add_argument('-e', '--epochs', type=int, default=25,
+                        help='Number of epochs to run')
+    parser.add_argument('--ensemble-count', type=int, default=3,
+                        help='Number of models to ensemble')
+    parser.add_argument('--max-len', type=int, default=100,
+                        help='Maximum length of the sentences')
+    parser.add_argument('--buckets', type=int, default=4,
+                        help='Number of buckets for padding lenght')
+    parser.add_argument('--source-embeddings', type=str, default=None,
+                        help='fastText model name for target language')
+    parser.add_argument('--target-embeddings', type=str, default=None,
+                        help='fastText model name for target language')
+    parser.add_argument('-m', '--embedding-size', type=int, default=300,
+                        help='Size of word embeddings')
+    parser.add_argument('-n', '--gru-size', type=int, default=500,
+                        help='Size of GRU')
+    parser.add_argument('-v', '--vocab-size', type=int, default=40000,
+                        help='Maximum vocab size')
