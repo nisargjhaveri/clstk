@@ -99,6 +99,7 @@ def getSentenceEncoder(vocabTransformer,
                        attention,
                        use_cnn,
                        filter_sizes, num_filters, sentence_vector_size,
+                       cnn_dropout,
                        model_inputs, verbose,
                        ):
     vocab_size = vocabTransformer.vocab_size()
@@ -139,7 +140,9 @@ def getSentenceEncoder(vocabTransformer,
         z = concatenate(conv_blocks) \
             if len(conv_blocks) > 1 else conv_blocks[0]
 
-        # z = Dropout(params["dropout"])(z)
+        if cnn_dropout > 0:
+            z = Dropout(cnn_dropout)(z)
+
         encoder = Dense(sentence_vector_size)(z)
 
     else:
@@ -387,18 +390,9 @@ def train(args):
                 filter_sizes=args.filter_sizes,
                 num_filters=args.num_filters,
                 sentence_vector_size=args.sentence_vector_size,
+                cnn_dropout=args.cnn_dropout,
                 )
 
 
 def getPredictor(args):
-    return load_predictor(args.workspace_dir,
-                          saveModel=args.save_model,
-                          ensemble_count=args.ensemble_count,
-                          max_len=args.max_len,
-                          num_buckets=args.buckets,
-                          embedding_size=args.embedding_size,
-                          gru_size=args.gru_size,
-                          src_fastText=args.source_embeddings,
-                          ref_fastText=args.target_embeddings,
-                          attention=args.with_attention,
-                          )
+    raise NotImplementedError()

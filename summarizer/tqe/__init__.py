@@ -212,3 +212,5 @@ def siameseArgparser(parser):
                         help='Number of filters for each sizes')
     parser.add_argument('--sentence-vector-size', type=int, default=500,
                         help='Size of sentence vector')
+    parser.add_argument('--cnn-dropout', type=float, default=0,
+                        help='Dropout in CNN encoder')
