@@ -3,9 +3,10 @@ import shelve
 
 from . import utils
 
-from keras.layers import dot, average
+from keras.layers import dot, average, concatenate
 from keras.layers import Input, Embedding
 from keras.layers import Dense, Activation, Lambda
+from keras.layers import Conv1D, GlobalMaxPooling1D, Dropout
 from keras.layers import GRU, Bidirectional
 from keras.models import Model
 from keras.callbacks import EarlyStopping
@@ -96,6 +97,8 @@ def getSentenceEncoder(vocabTransformer,
                        embedding_size, gru_size,
                        fastText,
                        attention,
+                       use_cnn,
+                       filter_sizes, num_filters, sentence_vector_size,
                        model_inputs, verbose,
                        ):
     vocab_size = vocabTransformer.vocab_size()
@@ -116,41 +119,58 @@ def getSentenceEncoder(vocabTransformer,
     else:
         input = Input(shape=(None, ))
 
-    src_embedding = Embedding(
+    embedding = Embedding(
                         output_dim=embedding_size,
                         input_dim=vocab_size,
-                        mask_zero=True,
+                        mask_zero=(not use_cnn),
                         name="embedding",
                         **embedding_kwargs)(input)
 
-    encoder = Bidirectional(
-                    GRU(gru_size, return_sequences=attention),
-                    name="encoder"
-            )(src_embedding)
+    if use_cnn:
+        conv_blocks = []
+        for filter_size in filter_sizes:
+            conv = Conv1D(
+                        filters=num_filters,
+                        kernel_size=filter_size
+                    )(embedding)
+            conv = GlobalMaxPooling1D()(conv)
+            conv_blocks.append(conv)
 
-    if attention:
-        attention_weights = TimeDistributedSequential([
-            Dense(gru_size, activation="tanh"),
-            Dense(1, name="attention_weights"),
-        ], encoder)
+        z = concatenate(conv_blocks) \
+            if len(conv_blocks) > 1 else conv_blocks[0]
 
-        # attention_weights = Reshape((-1,))(attention_weights)
-        attention_weights = Lambda(
-                    lambda x: K.reshape(x, (x.shape[0], -1,)),
-                    output_shape=lambda input_shape: input_shape[:-1],
-                    mask=lambda inputs, mask: mask,
-                    name="reshape"
-                    )(attention_weights)
+        # z = Dropout(params["dropout"])(z)
+        encoder = Dense(sentence_vector_size)(z)
 
-        attention_weights = Activation(
-                                "softmax",
-                                name="attention_softmax"
-                            )(attention_weights)
+    else:
+        encoder = Bidirectional(
+                        GRU(gru_size, return_sequences=attention),
+                        name="encoder"
+                )(embedding)
 
-        encoder = dot([attention_weights, encoder],
-                      axes=(1, 1),
-                      name="summary"
-                      )
+        if attention:
+            attention_weights = TimeDistributedSequential([
+                Dense(gru_size, activation="tanh"),
+                Dense(1, name="attention_weights"),
+            ], encoder)
+
+            # attention_weights = Reshape((-1,))(attention_weights)
+            attention_weights = Lambda(
+                        lambda x: K.reshape(x, (x.shape[0], -1,)),
+                        output_shape=lambda input_shape: input_shape[:-1],
+                        mask=lambda inputs, mask: mask,
+                        name="reshape"
+                        )(attention_weights)
+
+            attention_weights = Activation(
+                                    "softmax",
+                                    name="attention_softmax"
+                                )(attention_weights)
+
+            encoder = dot([attention_weights, encoder],
+                          axes=(1, 1),
+                          name="summary"
+                          )
 
     sentence_encoder = Model(inputs=input, outputs=encoder)
 
@@ -359,10 +379,14 @@ def train(args):
                 max_len=args.max_len,
                 num_buckets=args.buckets,
                 embedding_size=args.embedding_size,
-                gru_size=args.gru_size,
                 src_fastText=args.source_embeddings,
                 ref_fastText=args.target_embeddings,
+                gru_size=args.gru_size,
                 attention=args.with_attention,
+                use_cnn=args.cnn,
+                filter_sizes=args.filter_sizes,
+                num_filters=args.num_filters,
+                sentence_vector_size=args.sentence_vector_size,
                 )
 
 
