@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 
 import numpy as np
 from sklearn.model_selection import ShuffleSplit
@@ -244,16 +244,29 @@ def getBatchGenerator(*args, **kwargs):
     return BatchGeneratorSequence(*args, **kwargs)
 
 
-def get_fastText_embeddings(fastText_file, vocabTransformer, embedding_size):
-    import fastText
-    ft_model = fastText.load_model(fastText_file)
+fastTextCache = defaultdict(dict)
 
+
+def get_fastText_embeddings(fastText_file, vocabTransformer, embedding_size):
+    ft_cache = fastTextCache[fastText_file]
     embedding_matrix = np.zeros(
                         shape=(vocabTransformer.vocab_size(), embedding_size)
                     )
 
+    missingTokens = []
     for token, i in vocabTransformer.vocab_map().items():
-        embedding_matrix[i] = ft_model.get_word_vector(token)
+        if token in ft_cache:
+            embedding_matrix[i] = ft_cache[token]
+        else:
+            missingTokens.append((token, i))
+
+    if len(missingTokens):
+        import fastText
+        ft_model = fastText.load_model(fastText_file)
+
+        for token, i in missingTokens:
+            ft_cache[token] = ft_model.get_word_vector(token)
+            embedding_matrix[i] = ft_cache[token]
 
     return embedding_matrix
 

@@ -144,7 +144,6 @@ def getSentenceEncoder(vocabTransformer,
             z = Dropout(cnn_dropout)(z)
 
         encoder = Dense(sentence_vector_size)(z)
-
     else:
         encoder = Bidirectional(
                         GRU(gru_size, return_sequences=attention),
