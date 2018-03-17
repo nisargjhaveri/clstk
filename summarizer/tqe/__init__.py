@@ -206,9 +206,10 @@ def siameseArgparser(parser):
 
     parser.add_argument('--cnn', action="store_true",
                         help='Use CNN sentence encoder')
-    parser.add_argument('--filter-sizes', type=int, nargs='*', default=[3],
+    parser.add_argument('--filter-sizes', type=int, nargs='*',
+                        default=[3, 4, 5],
                         help='Filter sizes')
-    parser.add_argument('--num-filters', type=int, default=100,
+    parser.add_argument('--num-filters', type=int, default=200,
                         help='Number of filters for each sizes')
     parser.add_argument('--sentence-vector-size', type=int, default=500,
                         help='Size of sentence vector')
