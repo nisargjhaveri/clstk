@@ -111,8 +111,6 @@ def baselineArgparser(parser):
                         help='Train language model.')
     parser.add_argument('--train-ngrams', action='store_true',
                         help='Compute ngram freqs.')
-    parser.add_argument('--parse', action='store_true',
-                        help='Parse sentences.')
     parser.add_argument('--normalize', action='store_true',
                         help='Weather to normalize features or not.')
     parser.add_argument('--tune', action='store_true',
