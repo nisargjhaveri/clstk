@@ -218,7 +218,7 @@ def _computeFeatures(srcSentences, mtSentences,
 
 
 def _prepareFeatures(fileBasename, devFileSuffix=None, testFileSuffix=None,
-                     trainLM=True, trainNGrams=True, parseSentences=True):
+                     trainLM=True, trainNGrams=True):
     logger.info("Loading data for computing features")
 
     srcLMPath = fileBasename + ".src.lm.2.arpa"
@@ -317,6 +317,36 @@ def _getFeaturesFromFile(fileBasename, devFileSuffix=None, testFileSuffix=None,
     return X_train, y_train, X_dev, y_dev, X_test, y_test
 
 
+def _loadAndPrepareFeatures(fileBasename,
+                            devFileSuffix=None, testFileSuffix=None,
+                            featureFileSuffix=None, normalize=False,
+                            trainLM=True, trainNGrams=True):
+    if featureFileSuffix:
+        X_train, y_train, X_dev, y_dev, X_test, y_test = _getFeaturesFromFile(
+                                            fileBasename,
+                                            devFileSuffix=devFileSuffix,
+                                            testFileSuffix=testFileSuffix,
+                                            featureFileSuffix=featureFileSuffix
+                                            )
+    else:
+        X_train, y_train, X_dev, y_dev, X_test, y_test = _prepareFeatures(
+                                            fileBasename,
+                                            devFileSuffix=devFileSuffix,
+                                            testFileSuffix=testFileSuffix,
+                                            trainLM=trainLM,
+                                            trainNGrams=trainNGrams,
+                                            )
+
+    if normalize:
+        scaler = StandardScaler()
+        scaler.fit(X_train)
+
+        X_train = scaler.transform(X_train)
+        X_dev = scaler.transform(X_dev)
+
+    return X_train, y_train, X_dev, y_dev, X_test, y_test
+
+
 # def plotData(X, y, svr):
 #     pca = PCA(n_components=2)
 #     pcaX = pca.fit_transform(X)
@@ -371,36 +401,15 @@ def _printResult(results, printHeader=False):
         )
 
 
-def train_model(workspaceDir, modelName,
-                devFileSuffix=None, testFileSuffix=None,
-                featureFileSuffix=None, normalize=False, tune=False,
-                trainLM=True, trainNGrams=True,
-                maxJobs=-1):
+def train_model(workspaceDir, modelName, tune=False, maxJobs=-1,
+                **kwargs):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
-    if featureFileSuffix:
-        X_train, y_train, X_dev, y_dev, X_test, y_test = _getFeaturesFromFile(
-                                            fileBasename,
-                                            devFileSuffix=devFileSuffix,
-                                            testFileSuffix=testFileSuffix,
-                                            featureFileSuffix=featureFileSuffix
-                                            )
-    else:
-        X_train, y_train, X_dev, y_dev, X_test, y_test = _prepareFeatures(
-                                            fileBasename,
-                                            devFileSuffix=devFileSuffix,
-                                            testFileSuffix=testFileSuffix,
-                                            trainLM=trainLM,
-                                            trainNGrams=trainNGrams,
-                                            )
-
-    if normalize:
-        scaler = StandardScaler()
-        scaler.fit(X_train)
-
-        X_train = scaler.transform(X_train)
-        X_dev = scaler.transform(X_dev)
+    X_train, y_train, X_dev, y_dev, X_test, y_test = _loadAndPrepareFeatures(
+        fileBasename,
+        **kwargs
+    )
 
     # pca = PCA(n_components=15)
     # X = pca.fit_transform(X)
