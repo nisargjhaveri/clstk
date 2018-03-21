@@ -2,6 +2,7 @@ import os
 import subprocess
 import collections
 import cPickle
+import shelve
 
 import numpy as np
 from sklearn import svm
@@ -136,40 +137,45 @@ def _getOverlapCount(sentence, ngrams, n):
     return count
 
 
-def _parseSentences(sentences, parsedFilePath):
-    p = Pool(10)
+def _parseSentences(sentences, parseCacheFile):
+    def cacheKey(text):
+        return text.strip().encode('utf-8')
 
-    parser = CoreNLPParser(
-                url=os.getenv("CORENLP_HOST", "http://localhost:9000"))
+    cache = shelve.open(parseCacheFile)
 
-    parseIterator = p.imap(lambda s: parser.parse_one(s.split()), sentences)
-    parses = []
+    toParse = []
+    for sentence in sentences:
+        if cacheKey(sentence) not in cache:
+            toParse.append(sentence)
 
-    progress = ProgressBar(len(sentences))
-    for i, parse in enumerate(parseIterator):
-        progress.done(i)
-        parses.append(parse)
-    progress.complete()
+    if toParse:
+        p = Pool(10)
 
-    with open(parsedFilePath, "wb") as ngramsFile:
-        cPickle.dump(parses, ngramsFile, cPickle.HIGHEST_PROTOCOL)
+        parser = CoreNLPParser(
+                    url=os.getenv("CORENLP_HOST", "http://localhost:9000"))
 
+        parseIterator = p.imap(lambda s: parser.parse_one(s.split()), toParse)
 
-def _loadParsedSentences(parsedFilePath):
-    with open(parsedFilePath) as ngramsFile:
-        parses = cPickle.load(ngramsFile)
+        progress = ProgressBar(len(toParse))
+        for i, parse in enumerate(parseIterator):
+            cache[cacheKey(toParse[i])] = parse
+            progress.done(i)
+        progress.complete()
+
+    parses = map(lambda s: cache[cacheKey(s)], sentences)
+    cache.close()
 
     return parses
 
 
 def _computeFeatures(srcSentences, mtSentences,
-                     srcLModel, refLModel, highLowNGrams, parsePath):
+                     srcLModel, refLModel, highLowNGrams, parseCachePath):
     high1grams, low1grams, \
         high2grams, low2grams, \
         high3grams, low3grams = highLowNGrams
 
-    logger.info("Loading parse trees")
-    srcParses = _loadParsedSentences(parsePath)
+    logger.info("Parsing sentences")
+    srcParses = _parseSentences(srcSentences, parseCachePath)
 
     def _computeSentenceFeatures(srcSentence, mtSentence, srcParse):
         srcTokens = srcSentence.split()
@@ -218,9 +224,7 @@ def _prepareFeatures(fileBasename, devFileSuffix=None, testFileSuffix=None,
     srcLMPath = fileBasename + ".src.lm.2.arpa"
     refLMPath = fileBasename + ".ref.lm.2.arpa"
     ngramPath = fileBasename + ".src.ngrams.pickle"
-    srcParsePath = fileBasename + ".src.parse"
-    devParsePath = fileBasename + ".src.dev.parse"
-    testParsePath = fileBasename + ".src.test.parse"
+    parseCachePath = fileBasename + ".src.parse.cache"
 
     X_train, y_train, X_dev, y_dev, X_test, y_test = _loadData(
                             fileBasename,
@@ -238,12 +242,6 @@ def _prepareFeatures(fileBasename, devFileSuffix=None, testFileSuffix=None,
     if trainNGrams:
         logger.info("Computing ngram frequencies")
         _fitNGramCounts(X_train['src'], ngramPath)
-
-    if parseSentences:
-        logger.info("Parsing sentences")
-        _parseSentences(X_train['src'], srcParsePath)
-        _parseSentences(X_dev['src'], devParsePath)
-        _parseSentences(X_test['src'], testParsePath)
 
     # posCounts = CountVectorizer(
     #     lowercase=False,
@@ -267,15 +265,15 @@ def _prepareFeatures(fileBasename, devFileSuffix=None, testFileSuffix=None,
 
     X_train = _computeFeatures(X_train['src'], X_train['mt'],
                                srcLModel, refLModel, highLowNGrams,
-                               srcParsePath)
+                               parseCachePath)
 
     X_dev = _computeFeatures(X_dev['src'], X_dev['mt'],
                              srcLModel, refLModel, highLowNGrams,
-                             devParsePath)
+                             parseCachePath)
 
     X_test = _computeFeatures(X_test['src'], X_test['mt'],
                               srcLModel, refLModel, highLowNGrams,
-                              testParsePath)
+                              parseCachePath)
 
     return X_train, y_train, X_dev, y_dev, X_test, y_test
 
@@ -376,7 +374,7 @@ def _printResult(results, printHeader=False):
 def train_model(workspaceDir, modelName,
                 devFileSuffix=None, testFileSuffix=None,
                 featureFileSuffix=None, normalize=False, tune=False,
-                trainLM=True, trainNGrams=True, parseSentences=True,
+                trainLM=True, trainNGrams=True,
                 maxJobs=-1):
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
@@ -395,7 +393,6 @@ def train_model(workspaceDir, modelName,
                                             testFileSuffix=testFileSuffix,
                                             trainLM=trainLM,
                                             trainNGrams=trainNGrams,
-                                            parseSentences=parseSentences
                                             )
 
     if normalize:
@@ -460,5 +457,4 @@ def train(args):
                 tune=args.tune,
                 trainLM=args.train_lm,
                 trainNGrams=args.train_ngrams,
-                parseSentences=args.parse,
                 maxJobs=args.max_jobs)
