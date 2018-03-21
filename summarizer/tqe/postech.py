@@ -589,6 +589,10 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                     X_dev['ref'].reshape((len(X_dev['ref']), -1, 1)),
                 ]
             ),
+            callbacks=[
+                EarlyStopping(monitor="val_sparse_categorical_accuracy",
+                              patience=2, mode="max"),
+            ],
             verbose=2
         )
         logger.info("Training estimator")
@@ -607,6 +611,10 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
                     y_dev
                 ]
             ),
+            callbacks=[
+                EarlyStopping(monitor="val_pearsonr", patience=2,
+                              mode="max"),
+            ],
             verbose=2
         )
 
