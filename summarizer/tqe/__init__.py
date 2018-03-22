@@ -35,6 +35,7 @@ def setupSubparsers(parser):
     postechArgparser(subparsers.add_parser('postech', **parent))
     rnnArgparser(subparsers.add_parser('rnn', **parent))
     siameseArgparser(subparsers.add_parser('siamese', **parent))
+    fnnArgparser(subparsers.add_parser('fnn', **parent))
 
 
 def _getModel(model):
@@ -50,6 +51,9 @@ def _getModel(model):
     elif model == "siamese":
         from summarizer.tqe import siamese
         return siamese
+    elif model == "fnn":
+        from summarizer.tqe import fnn
+        return fnn
 
 
 def run(args):
@@ -213,3 +217,21 @@ def siameseArgparser(parser):
                         help='Size of sentence vector')
     parser.add_argument('--cnn-dropout', type=float, default=0,
                         help='Dropout in CNN encoder')
+
+
+def fnnArgparser(parser):
+    parser.add_argument('-b', '--batch-size', type=int, default=50,
+                        help='Batch size')
+    parser.add_argument('-e', '--epochs', type=int, default=25,
+                        help='Number of epochs to run')
+    parser.add_argument('--ensemble-count', type=int, default=3,
+                        help='Number of models to ensemble')
+
+    parser.add_argument('--feature-file-suffix', type=str, default=None,
+                        help='Suffix for feature files')
+    parser.add_argument('--train-lm', action='store_true',
+                        help='Train language model.')
+    parser.add_argument('--train-ngrams', action='store_true',
+                        help='Compute ngram freqs.')
+    parser.add_argument('--normalize', action='store_true',
+                        help='Weather to normalize features or not.')
