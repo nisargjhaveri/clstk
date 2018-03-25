@@ -15,7 +15,7 @@ import keras.backend as K
 
 # from keras.utils.generic_utils import CustomObjectScope
 
-from .common import WordIndexTransformer, _loadData
+from .common import WordIndexTransformer, _loadData, _preprocessSentences
 from .common import _printModelSummary, TimeDistributedSequential
 from .common import pad_sequences, getBatchGenerator
 from .common import pearsonr
@@ -365,7 +365,55 @@ def train_model(workspaceDir, modelName, devFileSuffix, testFileSuffix,
 
 
 def load_predictor(workspaceDir, saveModel, max_len, num_buckets, **kwargs):
-    raise NotImplementedError()
+    shelf = shelve.open(os.path.join(workspaceDir, "model." + saveModel), 'r')
+
+    srcVocabTransformer = shelf['params']['srcVocabTransformer']
+    refVocabTransformer = shelf['params']['refVocabTransformer']
+
+    kwargs['src_fastText'] = None
+    kwargs['ref_fastText'] = None
+
+    model = getEnsembledModel(srcVocabTransformer=srcVocabTransformer,
+                              refVocabTransformer=refVocabTransformer,
+                              **kwargs)
+
+    logger.info("Loading weights into model")
+    model.set_weights(shelf['weights'])
+
+    shelf.close()
+
+    def predictor(src, mt, y_test=None):
+        logger.info("Preparing data for prediction")
+        src = _preprocessSentences(src)
+        mt = _preprocessSentences(mt)
+
+        src = srcVocabTransformer.transform(src)
+        mt = refVocabTransformer.transform(mt)
+
+        srcMaxLen = min(max(map(len, src)), max_len)
+        refMaxLen = min(max(map(len, mt)), max_len)
+
+        src = pad_sequences(src, maxlen=srcMaxLen, num_buckets=num_buckets)
+        mt = pad_sequences(mt, maxlen=refMaxLen, num_buckets=num_buckets)
+
+        logger.info("Predicting")
+        predict_batches = getBatchGenerator(
+            [src, mt],
+            key=lambda x: "_".join(map(str, map(len, x)))
+        )
+
+        predicted = model.predict_generator(predict_batches).reshape((-1,))
+
+        predicted = predict_batches.alignOriginal(predicted)
+
+        if y_test is not None:
+            logger.info("Evaluating on test data of size %d" % len(y_test))
+            utils.evaluate(predicted,
+                           y_test)
+
+        return predicted
+
+    return predictor
 
 
 def train(args):
@@ -394,4 +442,19 @@ def train(args):
 
 
 def getPredictor(args):
-    raise NotImplementedError()
+    return load_predictor(args.workspace_dir,
+                          saveModel=args.save_model,
+                          ensemble_count=args.ensemble_count,
+                          max_len=args.max_len,
+                          num_buckets=args.buckets,
+                          embedding_size=args.embedding_size,
+                          src_fastText=args.source_embeddings,
+                          ref_fastText=args.target_embeddings,
+                          gru_size=args.gru_size,
+                          attention=args.with_attention,
+                          use_cnn=args.cnn,
+                          filter_sizes=args.filter_sizes,
+                          num_filters=args.num_filters,
+                          sentence_vector_size=args.sentence_vector_size,
+                          cnn_dropout=args.cnn_dropout,
+                          )
