@@ -227,7 +227,7 @@ def shefArgparser(parser):
     parser.add_argument('--no-early-stop', action="store_false",
                         dest="early_stop",
                         help="Don't early stop using validation")
-    parser.add_argument('--ensemble-count', type=int, default=3,
+    parser.add_argument('--ensemble-count', type=int, default=1,
                         help='Number of models to ensemble')
 
     parser.add_argument('--max-len', type=int, default=500,
