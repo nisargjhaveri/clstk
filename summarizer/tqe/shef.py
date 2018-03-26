@@ -5,18 +5,17 @@ from . import utils
 
 import numpy as np
 
-from keras.layers import dot, average, concatenate
+from keras.layers import average, concatenate
 from keras.layers import Input, Embedding
-from keras.layers import Dense, Activation, Lambda, Flatten
+from keras.layers import Dense, Flatten
 from keras.layers import Conv1D, MaxPooling1D, Dropout
 from keras.models import Model
 from keras.callbacks import EarlyStopping
 
-from .common import WordIndexTransformer, _loadData, _preprocessSentences
-from .common import _printModelSummary, TimeDistributedSequential
+from .common import WordIndexTransformer, _loadData
+from .common import _printModelSummary
 from .common import pad_sequences, getBatchGenerator
 from .common import pearsonr
-from .common import get_fastText_embeddings
 
 
 from .baseline import _loadAndPrepareFeatures
@@ -169,13 +168,13 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                                           verbose=verbose,
                                           **kwargs)(ref_input)
 
-    features_enc = Dense(50)(feature_input)
-    features_enc = Dense(50)(features_enc)
+    features_enc = Dense(50, activation="tanh")(feature_input)
+    features_enc = Dense(50, activation="tanh")(features_enc)
 
     hidden = concatenate([features_enc, src_sentence_enc, ref_sentence_enc])
 
-    hidden = Dense(50)(hidden)
-    hidden = Dense(50)(hidden)
+    hidden = Dense(50, activation="tanh")(hidden)
+    hidden = Dense(50, activation="tanh")(hidden)
 
     quality = Dense(1, name="quality")(hidden)
 
