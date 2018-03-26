@@ -150,13 +150,14 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     if verbose:
         logger.info("Creating model")
 
-    if model_inputs:
-        # feature_input, src_input, ref_input = model_inputs
-        src_input, ref_input = model_inputs
-    else:
-        # feature_input = Input(shape=(num_features, ))
-        src_input = Input(shape=(src_len, ))
-        ref_input = Input(shape=(ref_len, ))
+    if not model_inputs:
+        model_inputs = [
+            Input(shape=(num_features, )),
+            Input(shape=(src_len, )),
+            Input(shape=(ref_len, )),
+        ]
+
+    feature_input, src_input, ref_input = model_inputs
 
     src_sentence_enc = getSentenceEncoder(vocabTransformer=srcVocabTransformer,
                                           model_inputs=[src_input],
@@ -168,7 +169,10 @@ def getModel(srcVocabTransformer, refVocabTransformer,
                                           verbose=verbose,
                                           **kwargs)(ref_input)
 
-    hidden = concatenate([src_sentence_enc, ref_sentence_enc])
+    features_enc = Dense(50)(feature_input)
+    features_enc = Dense(50)(features_enc)
+
+    hidden = concatenate([features_enc, src_sentence_enc, ref_sentence_enc])
 
     hidden = Dense(50)(hidden)
     hidden = Dense(50)(hidden)
@@ -177,7 +181,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
 
     if verbose:
         logger.info("Compiling model")
-    model = Model(inputs=[src_input, ref_input],
+    model = Model(inputs=model_inputs,
                   outputs=[quality])
 
     model.compile(
@@ -205,11 +209,11 @@ def getEnsembledModel(ensemble_count,
     if ensemble_count == 1:
         return getModel(verbose=True, **kwargs)
 
-    # feature_input = Input(shape=(num_features, ))
+    feature_input = Input(shape=(num_features, ))
     src_input = Input(shape=(src_len, ))
     ref_input = Input(shape=(ref_len, ))
 
-    model_inputs = [src_input, ref_input]
+    model_inputs = [feature_input, src_input, ref_input]
 
     logger.info("Creating models to ensemble")
     verbose = [True] + [False] * (ensemble_count - 1)
@@ -245,15 +249,6 @@ def train_model(workspaceDir, modelName,
                 **kwargs):
     logger.info("initializing TQE training")
 
-    # X_train, y_train, X_dev, y_dev, X_test, y_test = _loadAndPrepareFeatures(
-    #     os.path.join(workspaceDir, "tqe." + modelName),
-    #     devFileSuffix=devFileSuffix, testFileSuffix=testFileSuffix,
-    #     featureFileSuffix=featureFileSuffix,
-    #     normalize=normalize,
-    #     trainLM=trainLM,
-    #     trainNGrams=trainNGrams,
-    # )
-
     srcVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
     refVocabTransformer = WordIndexTransformer(vocab_size=vocab_size)
 
@@ -268,11 +263,21 @@ def train_model(workspaceDir, modelName,
         testFileSuffix=testFileSuffix,
     )
 
-    # num_features = len(X_train[0])
+    X_train['features'], _, X_dev['features'], _, X_test['features'], _ = \
+        _loadAndPrepareFeatures(
+            os.path.join(workspaceDir, "tqe." + modelName),
+            devFileSuffix=devFileSuffix, testFileSuffix=testFileSuffix,
+            featureFileSuffix=featureFileSuffix,
+            normalize=normalize,
+            trainLM=trainLM,
+            trainNGrams=trainNGrams,
+        )
+
+    num_features = len(X_train['features'][0])
     src_len = len(X_train['src'][0])
     ref_len = len(X_train['ref'][0])
 
-    model = getEnsembledModel(num_features=None,
+    model = getEnsembledModel(num_features=num_features,
                               src_len=src_len,
                               ref_len=ref_len,
                               srcVocabTransformer=srcVocabTransformer,
@@ -281,6 +286,7 @@ def train_model(workspaceDir, modelName,
 
     logger.info("Training model")
     model.fit_generator(getBatchGenerator([
+                X_train['features'],
                 X_train['src'],
                 X_train['mt']
             ], [
@@ -292,6 +298,7 @@ def train_model(workspaceDir, modelName,
         epochs=epochs,
         shuffle=True,
         validation_data=getBatchGenerator([
+                X_dev['features'],
                 X_dev['src'],
                 X_dev['mt']
             ], [
@@ -320,6 +327,7 @@ def train_model(workspaceDir, modelName,
 
     logger.info("Evaluating on development data of size %d" % len(y_dev))
     dev_batches = getBatchGenerator([
+            X_dev['features'],
             X_dev['src'],
             X_dev['mt']
         ],
@@ -331,6 +339,7 @@ def train_model(workspaceDir, modelName,
 
     logger.info("Evaluating on test data of size %d" % len(y_test))
     test_batches = getBatchGenerator([
+            X_test['features'],
             X_test['src'],
             X_test['mt']
         ],
