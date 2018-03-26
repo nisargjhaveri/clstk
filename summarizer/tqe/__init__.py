@@ -27,8 +27,10 @@ def setupSubparsers(parser):
                                 help='Identifier for prepared files')
     predict_parser.add_argument('--evaluate', action='store_true',
                                 help="Evaluate along with prediction.")
-    predict_parser.add_argument('--print-result', action='store_true',
+    predict_parser.add_argument('--print-results', action='store_true',
                                 help="Print result")
+    predict_parser.add_argument('--save-results', type=str, default=None,
+                                help="Save results to file")
 
     parent = {'parents': [common_parser]}
     baselineArgparser(subparsers.add_parser('baseline', **parent))
@@ -79,8 +81,13 @@ def run(args):
         modelPath = os.path.join(args.workspace_dir, args.model_name)
         predicted = getPredictor(modelPath)(src, mt, y)
 
-        if args.print_result or not args.evaluate:
-            print list(predicted)
+        if args.print_results:
+            print "\n".join(list(predicted))
+
+        if args.save_results:
+            np.savetxt(os.path.join(args.workspace_dir, args.save_results),
+                       predicted,
+                       fmt="%.8f")
     else:
         train(args)
 
