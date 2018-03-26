@@ -79,7 +79,7 @@ def run(args):
         modelPath = os.path.join(args.workspace_dir, args.model_name)
         predicted = getPredictor(modelPath)(src, mt, y)
 
-        if args.print_result:
+        if args.print_result or not args.evaluate:
             print list(predicted)
     else:
         train(args)

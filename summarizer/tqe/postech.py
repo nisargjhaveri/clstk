@@ -667,7 +667,7 @@ def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
 
     shelf.close()
 
-    def predictor(src, mt):
+    def predictor(src, mt, y_test=None):
         src = _preprocessSentences(src)
         mt = _preprocessSentences(mt)
 
@@ -680,7 +680,15 @@ def load_predictor(workspaceDir, saveModel, max_len, **kwargs):
         src = pad_sequences(src, maxlen=srcMaxLen)
         mt = pad_sequences(mt, maxlen=refMaxLen)
 
-        return model_estimator.predict([src, mt]).reshape((-1,))
+        logger.info("Predicting")
+        predicted = model_estimator.predict([src, mt]).reshape((-1,))
+
+        if y_test is not None:
+            logger.info("Evaluating on test data of size %d" % len(y_test))
+            utils.evaluate(predicted,
+                           y_test)
+
+        return predicted
 
     return predictor
 
