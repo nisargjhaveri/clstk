@@ -119,7 +119,8 @@ def getSentenceEncoder(vocabTransformer,
         for i in range(cnn_depth):
             conv = Conv1D(
                         filters=num_filters,
-                        kernel_size=filter_size
+                        kernel_size=filter_size,
+                        activation="tanh"
                     )(conv)
             conv = MaxPooling1D(pool_size=pool_length)(conv)
 
