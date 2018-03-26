@@ -291,14 +291,14 @@ def train_model(workspaceDir, modelName,
         ),
         epochs=epochs,
         shuffle=True,
-        # validation_data=getBatchGenerator([
-        #         X_dev['src'],
-        #         X_dev['mt']
-        #     ], [
-        #         y_dev
-        #     ],
-        #     key=lambda x: "_".join(map(str, map(len, x)))
-        # ),
+        validation_data=getBatchGenerator([
+                X_dev['src'],
+                X_dev['mt']
+            ], [
+                y_dev
+            ],
+            key=lambda x: "_".join(map(str, map(len, x)))
+        ),
         callbacks=[
             EarlyStopping(monitor="val_pearsonr", patience=2, mode="max"),
         ],
