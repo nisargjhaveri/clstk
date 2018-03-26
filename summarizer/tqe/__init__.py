@@ -35,7 +35,7 @@ def setupSubparsers(parser):
     postechArgparser(subparsers.add_parser('postech', **parent))
     rnnArgparser(subparsers.add_parser('rnn', **parent))
     siameseArgparser(subparsers.add_parser('siamese', **parent))
-    fnnArgparser(subparsers.add_parser('fnn', **parent))
+    shefArgparser(subparsers.add_parser('shef', **parent))
 
 
 def _getModel(model):
@@ -51,9 +51,9 @@ def _getModel(model):
     elif model == "siamese":
         from summarizer.tqe import siamese
         return siamese
-    elif model == "fnn":
-        from summarizer.tqe import fnn
-        return fnn
+    elif model == "shef":
+        from summarizer.tqe import shef
+        return shef
 
 
 def run(args):
@@ -219,13 +219,33 @@ def siameseArgparser(parser):
                         help='Dropout in CNN encoder')
 
 
-def fnnArgparser(parser):
+def shefArgparser(parser):
     parser.add_argument('-b', '--batch-size', type=int, default=50,
                         help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=25,
                         help='Number of epochs to run')
     parser.add_argument('--ensemble-count', type=int, default=3,
                         help='Number of models to ensemble')
+
+    parser.add_argument('--max-len', type=int, default=500,
+                        help='Maximum length of the sentences')
+    parser.add_argument('--buckets', type=int, default=4,
+                        help='Number of buckets for padding lenght')
+    parser.add_argument('-v', '--vocab-size', type=int, default=40000,
+                        help='Maximum vocab size')
+    parser.add_argument('-m', '--embedding-size', type=int, default=50,
+                        help='Size of word embeddings')
+    parser.add_argument('--filter-sizes', type=int, nargs='*',
+                        default=[1, 2, 3, 4],
+                        help='Filter sizes')
+    parser.add_argument('--num-filters', type=int, default=50,
+                        help='Number of filters for each sizes')
+    parser.add_argument('--pool-length', type=int, default=4,
+                        help='Max-pool window size')
+    parser.add_argument('--cnn-depth', type=int, default=4,
+                        help='How many convolution/max-pooling to stack')
+    parser.add_argument('--cnn-dropout', type=float, default=0,
+                        help='Dropout in CNN encoder')
 
     parser.add_argument('--feature-file-suffix', type=str, default=None,
                         help='Suffix for feature files')
