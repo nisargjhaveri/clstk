@@ -337,14 +337,16 @@ def _loadAndPrepareFeatures(fileBasename,
                                             trainNGrams=trainNGrams,
                                             )
 
+    scaler = None
     if normalize:
         scaler = StandardScaler()
         scaler.fit(X_train)
 
         X_train = scaler.transform(X_train)
         X_dev = scaler.transform(X_dev)
+        X_test = scaler.transform(X_test)
 
-    return X_train, y_train, X_dev, y_dev, X_test, y_test
+    return scaler, (X_train, y_train, X_dev, y_dev, X_test, y_test)
 
 
 # def plotData(X, y, svr):
@@ -406,10 +408,11 @@ def train_model(workspaceDir, modelName, tune=False, maxJobs=-1,
     logger.info("initializing TQE training")
     fileBasename = os.path.join(workspaceDir, "tqe." + modelName)
 
-    X_train, y_train, X_dev, y_dev, X_test, y_test = _loadAndPrepareFeatures(
-        fileBasename,
-        **kwargs
-    )
+    standardScaler, (X_train, y_train, X_dev, y_dev, X_test, y_test) = \
+        _loadAndPrepareFeatures(
+            fileBasename,
+            **kwargs
+        )
 
     # pca = PCA(n_components=15)
     # X = pca.fit_transform(X)

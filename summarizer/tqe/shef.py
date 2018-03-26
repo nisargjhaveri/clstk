@@ -263,7 +263,8 @@ def train_model(workspaceDir, modelName,
         testFileSuffix=testFileSuffix,
     )
 
-    X_train['features'], _, X_dev['features'], _, X_test['features'], _ = \
+    (standardScaler,
+     (X_train['features'], _, X_dev['features'], _, X_test['features'], _)) = \
         _loadAndPrepareFeatures(
             os.path.join(workspaceDir, "tqe." + modelName),
             devFileSuffix=devFileSuffix, testFileSuffix=testFileSuffix,
@@ -321,6 +322,7 @@ def train_model(workspaceDir, modelName,
         shelf['params'] = {
             'srcVocabTransformer': srcVocabTransformer,
             'refVocabTransformer': refVocabTransformer,
+            'standardScaler': standardScaler
         }
 
         shelf.close()
