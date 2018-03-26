@@ -122,7 +122,7 @@ def getSentenceEncoder(vocabTransformer,
                         kernel_size=filter_size,
                         activation="tanh"
                     )(conv)
-            conv = MaxPooling1D(pool_size=pool_length)(conv)
+            conv = MaxPooling1D(pool_size=pool_length, strides=1)(conv)
 
         conv = Flatten()(conv)
 
@@ -245,7 +245,7 @@ def train_model(workspaceDir, modelName,
                 devFileSuffix, testFileSuffix,
                 featureFileSuffix, normalize, trainLM, trainNGrams,
                 max_len, num_buckets, vocab_size,
-                saveModel, batchSize, epochs,
+                saveModel, batchSize, epochs, early_stop,
                 **kwargs):
     logger.info("initializing TQE training")
 
@@ -308,7 +308,7 @@ def train_model(workspaceDir, modelName,
         ),
         callbacks=[
             EarlyStopping(monitor="val_pearsonr", patience=2, mode="max"),
-        ],
+        ] if early_stop else None,
         verbose=2
     )
 
@@ -359,6 +359,7 @@ def train(args):
                 saveModel=args.save_model,
                 batchSize=args.batch_size,
                 epochs=args.epochs,
+                early_stop=args.early_stop,
                 ensemble_count=args.ensemble_count,
 
                 vocab_size=args.vocab_size,
