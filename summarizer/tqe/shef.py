@@ -177,7 +177,7 @@ def getModel(srcVocabTransformer, refVocabTransformer,
     hidden = Dense(50, activation="tanh")(hidden)
     hidden = Dense(50, activation="tanh")(hidden)
 
-    quality = Dense(1, name="quality")(hidden)
+    quality = Dense(1, name="quality", activation="sigmoid")(hidden)
 
     if verbose:
         logger.info("Compiling model")
