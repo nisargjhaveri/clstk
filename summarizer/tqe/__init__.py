@@ -208,13 +208,6 @@ def siameseArgparser(parser):
     parser.add_argument('-m', '--embedding-size', type=int, default=300,
                         help='Size of word embeddings')
 
-    parser.add_argument('-n', '--gru-size', type=int, default=500,
-                        help='Size of GRU')
-    parser.add_argument('--with-attention', action="store_true",
-                        help='Add attention in decoder')
-
-    parser.add_argument('--cnn', action="store_true",
-                        help='Use CNN sentence encoder')
     parser.add_argument('--filter-sizes', type=int, nargs='*',
                         default=[3, 4, 5],
                         help='Filter sizes')
