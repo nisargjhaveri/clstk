@@ -5,7 +5,7 @@ from ..utils import nlp
 
 from ._objective import Objective
 
-from ..tqe import getPredictor
+from tqe import getPredictor
 
 import logging
 logger = logging.getLogger("translationQualityObjective.py")
