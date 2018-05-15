@@ -1,13 +1,12 @@
 import os
 import sys
-import tempfile
-import subprocess
 import argparse
 
 from summarizer.utils import fs
 from summarizer.utils import nlp
 
 from summarizer.evaluation import RougeScore
+from summarizer.evaluation import ExternalRougeScore
 
 from summarizer import linBilmes
 from summarizer import coRank
@@ -39,25 +38,11 @@ def summarizeAll(docNames, docsDir, outDir, summarizer, args):
     print
 
 
-def runRougeExternal(configFileName):
-    rougeHome = os.getenv("ROUGE_HOME", ".")
-    rougeExecutable = os.path.join(rougeHome, "ROUGE-1.5.5.pl")
-
-    command = ([rougeExecutable] +
-               "-n 2 -m -x -z SPL".split() +  # -f B
-               [configFileName])
-
-    rougeOutput = subprocess.Popen(command)
-    rougeOutput.communicate()
-
-
 def getAvailableReferences(refsDir):
     return os.walk(refsDir).next()[1]
 
 
 def getRougeScore(summaryNames, summariesDir, refsDir):
-    configFile = tempfile.NamedTemporaryFile(mode='w', suffix=".lst",
-                                             delete=False)
     summaryRefsList = []
 
     for summaryName in summaryNames:
@@ -66,19 +51,11 @@ def getRougeScore(summaryNames, summariesDir, refsDir):
         refPaths = map(lambda f: os.path.join(summaryRefsDir, f),
                        os.walk(summaryRefsDir).next()[2])
 
-        rougeEvalrule = [summaryPath] + refPaths
-
         summaryRefsList.append((summaryPath, refPaths))
 
-        configFile.write(" ".join(rougeEvalrule) + "\n")
-
-    configFile.close()
-
-    runRougeExternal(configFile.name)
+    ExternalRougeScore().rouge(summaryRefsList)
     print "-"
     RougeScore(stemmer=nlp.getStemmer()).rouge(summaryRefsList)
-
-    os.unlink(configFile.name)
 
 
 if __name__ == '__main__':
