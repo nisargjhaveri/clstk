@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import nltk
 
-CORENLP_JAR = os.getenv("CORENLP_JAR")
+# CORENLP_JAR = os.getenv("CORENLP_JAR")
 
 
 def getSentenceSplitter():
