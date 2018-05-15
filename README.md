@@ -12,7 +12,7 @@ The dependencies are listed in `requirements.txt`.
 
 To install all the dependencies, run `pip` as followed.
 ```
-$ pip install -U -r requirements.txt
+$ pip install --upgrade --process-dependency-link -r requirements.txt
 ```
 
 Also install nltk packages called `stopwords` and `punkt`.
