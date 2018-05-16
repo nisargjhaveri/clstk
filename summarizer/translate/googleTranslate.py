@@ -36,13 +36,13 @@ def _translateText(text, source, target):
     return translation['translatedText']
 
 
-def translate(text, source, target):
+def translate(text, sourceLang, targetLang):
     def cacheKey(text):
         return "_".join([
-            text.strip(), source, target
+            text.strip(), sourceLang, targetLang
         ]).encode('utf-8')
 
-    cache = shelve.open('.translation-cache')
+    cache = shelve.open('.translation-cache.google')
 
     sentencesToTranslate = []
     sourceSentences = text.split("\n")
@@ -53,7 +53,7 @@ def translate(text, source, target):
 
     if len(sentencesToTranslate):
         textToTranslate = "\n".join(sentencesToTranslate)
-        translation = _translateText(textToTranslate, source, target)
+        translation = _translateText(textToTranslate, sourceLang, targetLang)
 
         translatedSentences = translation.split("\n")
 
