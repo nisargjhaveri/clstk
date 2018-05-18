@@ -44,8 +44,6 @@ def _simplify(sentences):
     os.unlink(srcFile.name)
     os.unlink(outFile.name)
 
-    print "\n".join(simpleSentences)
-
     return simpleSentences
 
 
