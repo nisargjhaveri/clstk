@@ -3,3 +3,4 @@ tests
 workspace
 
 .translation-cache*
+.simplification-cache*

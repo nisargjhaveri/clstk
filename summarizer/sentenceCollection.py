@@ -1,5 +1,6 @@
 from sentence import Sentence
 from translate.googleTranslate import translate
+from simplify.neuralTextSimplification import simplify
 
 import numpy as np
 import sklearn
@@ -76,3 +77,13 @@ class SentenceCollection(object):
             map(Sentence.setText, self._sentences, translations)
 
         map(Sentence.setTranslation, self._sentences, translations)
+
+    def simplify(self, replaceOriginal=False):
+        sentences = map(Sentence.getText, self._sentences)
+
+        simpleSentences = simplify(sentences)
+
+        if replaceOriginal:
+            map(Sentence.setText, self._sentences, simpleSentences)
+
+        # map(Sentence.setSimpleSentence, self._sentences, simpleSentences)

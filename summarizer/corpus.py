@@ -5,6 +5,9 @@ from sentenceCollection import SentenceCollection
 
 from utils import nlp
 
+import logging
+logger = logging.getLogger("corpus.py")
+
 
 class Corpus(SentenceCollection):
     def __init__(self, dirname):
@@ -42,7 +45,11 @@ class Corpus(SentenceCollection):
         sentences = map(lambda s: s.strip(), sentences)
         self.addSentences(map(Sentence, set(sentences)))
 
+        logger.info("Simplifying sentences")
+        self.simplify(replaceOriginal=True)
+
         if translate:
+            logger.info("Translating sentences")
             if self.sourceLang != self.targetLang:
                 self.translate(self.sourceLang,
                                self.targetLang,
