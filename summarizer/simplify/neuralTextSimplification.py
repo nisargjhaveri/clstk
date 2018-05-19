@@ -17,7 +17,7 @@ def _simplify(sentences, lang):
     srcFile = tempfile.NamedTemporaryFile(suffix=".src", delete=False)
     outFile = tempfile.NamedTemporaryFile(suffix=".out", delete=False)
 
-    sentences = map(nlp.getTokenizer(lang), sentences)
+    sentences = map(lambda s: " ".join(nlp.getTokenizer(lang)(s)), sentences)
 
     srcFile.write("\n".join(sentences).encode('utf-8'))
 
