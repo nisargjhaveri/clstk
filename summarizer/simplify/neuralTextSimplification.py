@@ -28,12 +28,15 @@ def _simplify(sentences):
 
     env = os.environ.copy()
     env['LUA_PATH'] = env.get("LUA_PATH", "") + ";" + OPENNMT_PATH + "/?.lua"
-    command = (["th", translateLua, "-replace_unk"] +
+    command = (["th", translateLua] +
+               ["-replace_unk"] +
                ["-beam_size", str(beamSize)] +
                ["-gpuid", str(GPUS)] +
                ["-model", MODEL_PATH] +
                ["-src", srcFile.name] +
-               ["-output", outFile.name])
+               ["-output", outFile.name] +
+               ["-log_level", "WARNING"]
+               )
 
     subprocess.call(command, env=env)
 
@@ -43,6 +46,7 @@ def _simplify(sentences):
 
     os.unlink(srcFile.name)
     os.unlink(outFile.name)
+    os.unlink(outFile.name + "_h1")
 
     return simpleSentences
 
