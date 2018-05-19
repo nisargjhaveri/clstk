@@ -49,8 +49,8 @@ class Corpus(SentenceCollection):
         self.simplify(replaceOriginal=True)
 
         if translate:
-            logger.info("Translating sentences")
             if self.sourceLang != self.targetLang:
+                logger.info("Translating sentences")
                 self.translate(self.sourceLang,
                                self.targetLang,
                                replaceOriginal)
