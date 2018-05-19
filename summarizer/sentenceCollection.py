@@ -78,10 +78,10 @@ class SentenceCollection(object):
 
         map(Sentence.setTranslation, self._sentences, translations)
 
-    def simplify(self, replaceOriginal=False):
+    def simplify(self, sourceLang, replaceOriginal=False):
         sentences = map(Sentence.getText, self._sentences)
 
-        simpleSentences = simplify(sentences)
+        simpleSentences = simplify(sentences, sourceLang)
 
         if replaceOriginal:
             map(Sentence.setText, self._sentences, simpleSentences)

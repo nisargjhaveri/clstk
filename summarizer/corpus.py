@@ -46,7 +46,7 @@ class Corpus(SentenceCollection):
         self.addSentences(map(Sentence, set(sentences)))
 
         logger.info("Simplifying sentences")
-        self.simplify(replaceOriginal=True)
+        self.simplify(self.sourceLang, replaceOriginal=True)
 
         if translate:
             if self.sourceLang != self.targetLang:

@@ -2,9 +2,10 @@ import tempfile
 import os
 import subprocess
 import shelve
+from ..utils import nlp
 
 
-def _simplify(sentences):
+def _simplify(sentences, lang):
     OPENNMT_PATH = os.getenv("NTS_OPENNMT_PATH", None)
     MODEL_PATH = os.getenv("NTS_MODEL_PATH", None)
     GPUS = os.getenv("NTS_GPUS", 0)
@@ -15,6 +16,8 @@ def _simplify(sentences):
 
     srcFile = tempfile.NamedTemporaryFile(suffix=".src", delete=False)
     outFile = tempfile.NamedTemporaryFile(suffix=".out", delete=False)
+
+    sentences = map(nlp.getTokenizer(lang), sentences)
 
     srcFile.write("\n".join(sentences).encode('utf-8'))
 
