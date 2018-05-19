@@ -6,7 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn import preprocessing
 
 import logging
-logger = logging.getLogger("coRank.py")
+logger = logging.getLogger("simFusion.py")
 
 
 def _row_normalize(M):
