@@ -54,7 +54,7 @@ def _simplify(sentences, lang):
     return simpleSentences
 
 
-def simplify(sentences):
+def simplify(sentences, lang):
     def cacheKey(text):
         return "_".join([
             text.strip()
@@ -69,7 +69,7 @@ def simplify(sentences):
             sentencesToSimplify.append(sentence)
 
     if len(sentencesToSimplify):
-        simpleSentences = _simplify(sentencesToSimplify)
+        simpleSentences = _simplify(sentencesToSimplify, lang)
 
         if (len(sentencesToSimplify) != len(simpleSentences)):
             raise RuntimeError("SENTENCE_SIMPLIFICATION_ERROR")
