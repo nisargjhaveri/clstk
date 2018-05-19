@@ -23,7 +23,7 @@ def _simplify(sentences, lang):
 
     def tokenize(sentence):
         sentence = " ".join(tokenizer(sentence))
-        sentence = sentence.replace(u"￨", u"|")
+        sentence = sentence.replace(u"|", u"￨")
 
         return sentence
 
