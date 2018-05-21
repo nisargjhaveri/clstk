@@ -25,7 +25,8 @@ class Corpus(SentenceCollection):
             []
         )
 
-    def load(self, params, translate=False, replaceOriginal=False):
+    def load(self, params, translate=False, replaceWithTranslation=False,
+             simplify=False, replaceWithSimplified=False):
         self.setSourceLang(params['sourceLang'])
         self.setTargetLang(params['targetLang'])
 
@@ -45,17 +46,19 @@ class Corpus(SentenceCollection):
         sentences = map(lambda s: s.strip(), sentences)
         self.addSentences(map(Sentence, set(sentences)))
 
-        logger.info("Simplifying sentences")
-        self.simplify(self.sourceLang, replaceOriginal=True)
+        if simplify:
+            logger.info("Simplifying sentences")
+            self.simplify(self.sourceLang,
+                          replaceOriginal=replaceWithSimplified)
 
         if translate:
             if self.sourceLang != self.targetLang:
                 logger.info("Translating sentences")
                 self.translate(self.sourceLang,
                                self.targetLang,
-                               replaceOriginal)
+                               replaceOriginal=replaceWithTranslation)
 
-            if replaceOriginal:
+            if replaceWithTranslation:
                 self.setSourceLang(self.targetLang)
 
             self.generateTranslationSentenceVectors()

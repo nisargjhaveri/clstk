@@ -57,8 +57,13 @@ def optimizeGreedy(sizeBudget, objective, corpus):
 
 def summarize(inDir, params):
     logger.info("Loading documents from %s", inDir)
-    c = Corpus(inDir).load(params, translate=True,
-                           replaceOriginal=params['earlyTranslate'])
+    c = Corpus(inDir).load(
+            params,
+            translate=True,
+            replaceWithTranslation=params['earlyTranslate'],
+            simplify=(params['simplify'] is not None),
+            replaceWithSimplified=(params['simplify'] == 'early')
+        )
 
     logger.info("Setting up summarizer")
     objective = AggregateObjective(params['objectives'])
@@ -76,6 +81,8 @@ def setupArgparse(parser):
             'sourceLang': args.source_lang,
             'targetLang': args.target_lang or args.source_lang,
             'earlyTranslate': args.early_translate,
+            'simplify': (args.simplify
+                         if args.simplify in ['early', 'late'] else None)
         }
 
         summary = summarize(args.source_directory, params)
@@ -103,6 +110,9 @@ def setupArgparse(parser):
                         'Defaults to source language.')
     parser.add_argument('--early-translate', action="store_true",
                         help='First translate and then summarize.')
+    parser.add_argument('--simplify', type=str, default='never',
+                        choices=['early', 'never'],
+                        help='When to simplify sentences and then summarize.')
 
     objectives.utils.addObjectiveParams(parser)
 

@@ -1,6 +1,7 @@
 class Sentence(object):
     def __init__(self, sentenceText):
         self.setText(sentenceText)
+        self.setSimpleText(sentenceText)
         self.setTranslation(sentenceText)
 
     def setText(self, sentenceText):
@@ -27,6 +28,12 @@ class Sentence(object):
     def getTranslation(self):
         # return " ".join(self._translationTokens)
         return self._translation
+
+    def setSimpleText(self, sentenceText):
+        self._simpleText = sentenceText
+
+    def getSimpleText(self):
+        return self._simpleText
 
     def charCount(self):
         return len(self._translation)
