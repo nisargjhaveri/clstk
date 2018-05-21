@@ -53,9 +53,14 @@ def _simplify(sentences, lang):
 
     subprocess.call(command, env=env)
 
+    detokenizer = nlp.getDetokenizer(lang)
+
+    def detokenize(sentence):
+        sentence = sentence.decode('utf-8').strip().split()
+        return detokenizer(sentence)
+
     with open(outFile.name, "r") as output:
-        simpleSentences = map(lambda s: s.decode('utf-8').strip(),
-                              output.readlines())
+        simpleSentences = map(detokenize, output.readlines())
 
     os.unlink(srcFile.name)
     os.unlink(outFile.name)

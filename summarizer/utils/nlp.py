@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import os
 from collections import defaultdict
 
 import nltk
@@ -30,6 +29,11 @@ def getTokenizer(lang):
     else:
         from polyglot.text import Text
         return lambda t: Text(t).words
+
+
+def getDetokenizer(lang):
+    d = nltk.tokenize.treebank.TreebankWordDetokenizer()
+    return d.detokenize
 
 
 def getStemmer():
