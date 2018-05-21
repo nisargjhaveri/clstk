@@ -87,4 +87,5 @@ class SentenceCollection(object):
             map(Sentence.setText, self._sentences, simpleSentences)
             map(Sentence.setTranslation, self._sentences, simpleSentences)
 
-        map(Sentence.setSimpleText, self._sentences, simpleSentences)
+        map(lambda s, t: s.setExtra('simpleText', t),
+            self._sentences, simpleSentences)
