@@ -62,7 +62,7 @@ def summarize(inDir, params):
             translate=True,
             replaceWithTranslation=params['earlyTranslate'],
             simplify=(params['simplify'] is not None),
-            replaceWithSimplified=(params['simplify'] == 'early')
+            replaceWithSimplified=(params['simplify'] == 'early'),
         )
 
     logger.info("Setting up summarizer")

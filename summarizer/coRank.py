@@ -19,7 +19,12 @@ def normalize(M):
 
 def summarize(inDir, params):
     logger.info("Loading documents from %s", inDir)
-    c = Corpus(inDir).load(params, translate=True)
+    c = Corpus(inDir).load(
+            params,
+            translate=True,
+            simplify=(params['simplify'] is not None),
+            replaceWithSimplified=(params['simplify'] == 'early')
+        )
 
     logger.info("Setting up summarizer")
     M_en = cosine_similarity(
@@ -109,7 +114,9 @@ def setupArgparse(parser):
             'sourceLang': args.source_lang,
             'targetLang': args.target_lang or args.source_lang,
             'alpha': args.alpha,
-            'max_iter': args.max_iter
+            'max_iter': args.max_iter,
+            'simplify': (args.simplify
+                         if args.simplify in ['early', 'late'] else None),
         }
 
         summary = summarize(args.source_directory, params)
@@ -142,5 +149,9 @@ def setupArgparse(parser):
                         'the information in the other language')
     parser.add_argument('--max-iter', type=int, default=1000,
                         help='Maximum iterations for the iterative algorithm')
+
+    parser.add_argument('--simplify', type=str, default='never',
+                        choices=['early', 'never'],
+                        help='When to simplify sentences and then summarize.')
 
     parser.set_defaults(func=run)
