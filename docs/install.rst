@@ -16,7 +16,7 @@ To install all the dependencies, run ``pip`` as followed.
 
 .. code-block:: bash
 
- $ pip install --upgrade --process-dependency-link -r requirements.txt
+ $ pip install --upgrade -r requirements.txt
 
 
 Also install nltk packages called ``stopwords`` and ``punkt``.
