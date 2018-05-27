@@ -155,3 +155,9 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+import mock
+import sys
+
+MOCK_MODULES = ['kenlm', 'fastText']
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
