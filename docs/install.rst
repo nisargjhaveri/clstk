@@ -5,7 +5,7 @@ Clone repository
 ----------------
 .. code-block:: bash
 
- $ git clone https://github.com/nisargjhaveri/summarizer
+ $ git clone https://github.com/nisargjhaveri/clstk
 
 
 Python dependencies

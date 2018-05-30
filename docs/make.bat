@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=.
 set BUILDDIR=_build
-set SPHINXPROJ=summarizer
+set SPHINXPROJ=clstk
 
 if "%1" == "" goto help
 

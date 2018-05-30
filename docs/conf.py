@@ -19,7 +19,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u'summarizer'
+project = u'clstk'
 copyright = u'2018, Nisarg Jhaveri'
 author = u'Nisarg Jhaveri'
 
@@ -100,7 +100,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'summarizerdoc'
+htmlhelp_basename = 'clstkdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -127,7 +127,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'summarizer.tex', u'summarizer Documentation',
+    (master_doc, 'clstk.tex', u'clstk Documentation',
      u'Nisarg Jhaveri', 'manual'),
 ]
 
@@ -137,7 +137,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'summarizer', u'summarizer Documentation',
+    (master_doc, 'clstk', u'clstk Documentation',
      [author], 1)
 ]
 
@@ -148,8 +148,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'summarizer', u'summarizer Documentation',
-     author, 'summarizer', 'One line description of project.',
+    (master_doc, 'clstk', u'clstk Documentation',
+     author, 'clstk', 'One line description of project.',
      'Miscellaneous'),
 ]
 

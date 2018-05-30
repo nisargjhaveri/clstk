@@ -1,9 +1,9 @@
-.. summarizer documentation master file, created by
+.. clstk documentation master file, created by
    sphinx-quickstart on Sun May 27 09:08:29 2018.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to summarizer's documentation!
+Welcome to clstk's documentation!
 ======================================
 
 .. toctree::
