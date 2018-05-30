@@ -35,6 +35,10 @@ Following is the common pattern to run a CLS method on one document set.
 All files stored in the directory ``source_directory`` are read and treated as a part of document set to summarize.
 The files are expected to be plain text files.
 
+Required arguments
+^^^^^^^^^^^^^^^^^^^
+  :source_directory:      Directory containing a set of files to be summarized.
+
 Common options
 ^^^^^^^^^^^^^^
 Here is a list of common optional arguments across all CLS methods.
