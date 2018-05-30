@@ -12,3 +12,4 @@ Welcome to clstk's documentation!
 
    Installation <install.rst>
    Datasets <datasets.rst>
+   Usage <usage.rst>

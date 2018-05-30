@@ -3,7 +3,7 @@ Installation
 
 Clone repository
 ----------------
-.. code-block:: bash
+.. code-block:: console
 
  $ git clone https://github.com/nisargjhaveri/clstk
 
@@ -14,14 +14,14 @@ The dependencies are listed in ``requirements.txt``.
 
 To install all the dependencies, run ``pip`` as followed.
 
-.. code-block:: bash
+.. code-block:: console
 
  $ pip install --upgrade -r requirements.txt
 
 
 Also install nltk packages called ``stopwords`` and ``punkt``.
 
-.. code-block:: bash
+.. code-block:: console
 
  $ python -m nltk.downloader stopwords punkt -d $NLTK_DATA
 
