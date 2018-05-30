@@ -1,38 +1,15 @@
-# summarizer
+# clstk
 
-## Setup
+`clstk` is a cross-lingual summarization tool-kit.
 
-### Clone this repository
-```
-$ git clone https://github.com/nisargjhaveri/summarizer
-```
+## Documentation
+https://clstk.readthedocs.io/
 
-### Python dependencies
-The dependencies are listed in `requirements.txt`.
+## Datasets
+Cross-lingual summarization evaluation datasets.
 
-To install all the dependencies, run `pip` as followed.
-```
-$ pip install --upgrade -r requirements.txt
-```
+1. DUC 2004 Gujarati Dataset
+https://github.com/nisargjhaveri/duc2004-translated
 
-Also install nltk packages called `stopwords` and `punkt`.
-```
-$ python -m nltk.downloader stopwords punkt -d $NLTK_DATA
-```
-
-### Setup CLUTO (optional, required for linBilmes summarizer)
-http://glaros.dtc.umn.edu/gkhome/cluto/cluto/download
-
-Set an environment variable `CLUTO_BIN_PATH` with the path of directory containing `vcluster` binary file.
-
-### Setup ROUGE 1.5.5 (optional, required for evaluating summaries)
-https://github.com/nisargjhaveri/ROUGE-1.5.5-unicode
-
-This is required only if you plan to evaluate the summaries using ROUGE score. You may skip this.
-
-Obtain and setup ROUGE 1.5.5 according to the instructions there.
-
-Set an environment variable `ROUGE_HOME` with the path to ROUGE root directory, the one containing `ROUGE-1.5.5.pl` file.
-
-### Setup dependencies for TQE
-https://github.com/nisargjhaveri/tqe
+2. MultiLing Pilot 2011 Dataset
+http://users.iit.demokritos.gr/~ggianna/TAC2011/MultiLing2011.html
