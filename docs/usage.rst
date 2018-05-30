@@ -65,14 +65,14 @@ Similar to ``sum.py``, this script also needs the CLS method as first argument a
   $ python evaluate.py {method} [options] {source_path} {models_path} {summaries_path}
 
 
-Required arguments:
-^^^^^^^^^^^^^^^^^^^
+Required arguments
+^^^^^^^^^^^^^^^^^^
   :source_path:           Directory containing all the source files to be summarized. Each set of documents are expected to be in different directories inside this path.
   :models_path:           Directory containing all the model summaries. Each set of summaires are expected to be in different directory inside this path, having the same name as the corresponding directory in the source directory.
   :summaries_path:        Directory to store the generated summaries. The directory will be created if not already exists.
 
-Common options:
-^^^^^^^^^^^^^^^
+Common options
+^^^^^^^^^^^^^^
   -h, --help            show this help message and exit
   --only-rouge          Do not run summarizer. Only compule ROUGE score for
                         existing summaries in summaries_path
