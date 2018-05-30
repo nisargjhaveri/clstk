@@ -11,3 +11,4 @@ Welcome to summarizer's documentation!
    :caption: Contents:
 
    Installation <install.rst>
+   Datasets <datasets.rst>
