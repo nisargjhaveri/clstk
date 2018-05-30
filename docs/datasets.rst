@@ -5,9 +5,10 @@ DUC 2004 Gujarati Dataset
 -------------------------
 https://github.com/nisargjhaveri/duc2004-translated
 
-The is cross-lingual summarization evaluation dataset for English to Gujarati summarization.
-
+This is a cross-lingual summarization evaluation dataset for English to Gujarati summarization.
 The dataset can be obtained from the link mentioned above.
+
+You'll also need original DUC 2004 dataset as the above link does not contain source documents due to licensing reasons.
 
 
 MultiLing Pilot 2011 Dataset
