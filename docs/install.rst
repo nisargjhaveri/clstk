@@ -26,18 +26,20 @@ Also install nltk packages called ``stopwords`` and ``punkt``.
  $ python -m nltk.downloader stopwords punkt -d $NLTK_DATA
 
 
-Setup CLUTO (optional, required for linBilmes summarizer)
+Setup CLUTO (optional)
 ---------------------------------------------------------
 http://glaros.dtc.umn.edu/gkhome/cluto/cluto/download
+
+This is required if you want to use "linBilmes" summarizer.
 
 Set an environment variable ``CLUTO_BIN_PATH`` with the path of directory containing ``vcluster`` binary file.
 
 
-Setup ROUGE 1.5.5 (optional, required for evaluating summaries)
+Setup ROUGE 1.5.5 (optional)
 ---------------------------------------------------------------
 https://github.com/nisargjhaveri/ROUGE-1.5.5-unicode
 
-This is required only if you plan to evaluate the summaries using ROUGE score. You may skip this.
+This is required only if you plan to evaluate the summaries using ROUGE score.
 
 Obtain and setup ROUGE 1.5.5 according to the instructions there.
 
@@ -49,3 +51,10 @@ Setup dependencies for TQE (optional)
 https://github.com/nisargjhaveri/tqe
 
 Install dependencies for ``tqe`` module according to the details provided in the link above.
+
+
+Setup NeuralTextSimplification (optional)
+-----------------------------------------
+https://github.com/senisioi/NeuralTextSimplification
+
+Setup system from above URL and set ``NTS_OPENNMT_PATH``, ``NTS_MODEL_PATH`` and ``NTS_GPUS`` variables accordingly.
