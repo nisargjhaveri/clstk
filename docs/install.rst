@@ -47,3 +47,5 @@ Set an environment variable ``ROUGE_HOME`` with the path to ROUGE root directory
 Setup dependencies for TQE (optional)
 -------------------------------------
 https://github.com/nisargjhaveri/tqe
+
+Install dependencies for ``tqe`` module according to the details provided in the link above.
