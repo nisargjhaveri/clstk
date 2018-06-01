@@ -1,11 +1,11 @@
 import argparse
 import logging
 
-from summarizer.utils import colors
+from clstk.utils import colors
 
-from summarizer import linBilmes
-from summarizer import coRank
-from summarizer import simFusion
+from clstk import linBilmes
+from clstk import coRank
+from clstk import simFusion
 
 if __name__ == '__main__':
     common_parser = argparse.ArgumentParser(add_help=False)

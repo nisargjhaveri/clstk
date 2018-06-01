@@ -2,15 +2,15 @@ import os
 import sys
 import argparse
 
-from summarizer.utils import fs
-from summarizer.utils import nlp
+from clstk.utils import fs
+from clstk.utils import nlp
 
-from summarizer.evaluation import RougeScore
-from summarizer.evaluation import ExternalRougeScore
+from clstk.evaluation import RougeScore
+from clstk.evaluation import ExternalRougeScore
 
-from summarizer import linBilmes
-from summarizer import coRank
-from summarizer import simFusion
+from clstk import linBilmes
+from clstk import coRank
+from clstk import simFusion
 
 
 def runSummarizer(inDir, outFile, summarizer, args):
