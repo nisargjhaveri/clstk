@@ -3,7 +3,7 @@
 `clstk` is a cross-lingual summarization tool-kit.
 
 ## Documentation
-https://clstk.readthedocs.io/
+The complete documentation is available at https://clstk.readthedocs.io/
 
 ## Datasets
 Cross-lingual summarization evaluation datasets.
