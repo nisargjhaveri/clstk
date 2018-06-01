@@ -21,5 +21,6 @@ Welcome to clstk's documentation!
 
   dev/core
   dev/utils
+  dev/evaluate
   dev/translate
   dev/simplify

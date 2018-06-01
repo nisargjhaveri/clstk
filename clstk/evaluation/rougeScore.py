@@ -1,6 +1,11 @@
-# Taken and adopted from
-# https://github.com/miso-belica/sumy/blob/master/sumy/evaluation/rouge.py
-# https://github.com/google/seq2seq/blob/master/seq2seq/metrics/rouge.py
+"""
+Python implementation of ROUGE score.
+
+Taken and adopted from:
+
+- https://github.com/miso-belica/sumy/blob/master/sumy/evaluation/rouge.py
+- https://github.com/google/seq2seq/blob/master/seq2seq/metrics/rouge.py
+"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -15,6 +20,10 @@ import regex
 
 
 class RougeScore(object):
+    """
+    Implementation of ROUGE score.
+    """
+
     def __init__(self, tokenizer=None, stemmer=None):
         self._tokenize = tokenizer if tokenizer else self.dummy_tokenizer
         self._stemmer = stemmer if stemmer else self.dummy_stemmer
@@ -75,7 +84,9 @@ class RougeScore(object):
     def rouge_n(self, summary, model_summaries, n=2):
         """
         Computes ROUGE-N of two text collections of sentences.
-        Sourece: http://research.microsoft.com/en-us/um/people/cyl/download/
+        """
+        """
+        Source: http://research.microsoft.com/en-us/um/people/cyl/download/
         papers/rouge-working-note-v1.3.1.pdf
         Args:
             summary: The sentences that have been picked by the
@@ -160,6 +171,8 @@ class RougeScore(object):
     def rouge_l_sentence_level(self, evaluated_sentences, reference_sentences):
         """
         Computes ROUGE-L (sentence level) of two text collections of sentences.
+        """
+        """
         http://research.microsoft.com/en-us/um/people/cyl/download/papers/
         rouge-working-note-v1.3.1.pdf
         Calculated according to:
@@ -275,6 +288,8 @@ class RougeScore(object):
     def rouge_l_summary_level(self, evaluated_sentences, reference_sentences):
         """
         Computes ROUGE-L (summary level) of two text collections of sentences.
+        """
+        """
         http://research.microsoft.com/en-us/um/people/cyl/download/papers/
         rouge-working-note-v1.3.1.pdf
         Calculated according to:
@@ -326,8 +341,14 @@ class RougeScore(object):
             print("---------------------------------")
 
     def rouge(self, hyp_refs_pairs, print_all=False):
-        """Calculates average rouge scores for a list of hypotheses and
-        references"""
+        """
+        Calculates and prints average rouge scores for a list of hypotheses
+        and references
+
+        :param hyp_refs_pairs: List containing pairs of path to summary and
+                               list of paths to reference summaries
+        :param print_all: Print every evaluation along with averages
+        """
 
         rouge_1_all = []
         rouge_2_all = []
