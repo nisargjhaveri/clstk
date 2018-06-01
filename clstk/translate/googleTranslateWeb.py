@@ -2,7 +2,9 @@
 # 1. https://github.com/matheuss/google-translate-token and
 # 2. https://github.com/nisargjhaveri/news-access/tree/master/translate
 
-# DO NOT use this for commercial purpuses
+"""
+**DO NOT** use this for commercial purpuses
+"""
 
 import time
 import requests
@@ -157,6 +159,16 @@ def _translateText(text, source, target):
 
 
 def translate(text, sourceLang, targetLang, sentencePerLine=True):
+    """
+    Translate text
+
+    :param text: Text, each line contains one sentence
+    :param sourceLang: Two-letter code for source language
+    :param targetLang: Two-letter code for target language
+
+    :returns: translated text and list of translated sentences
+    :rtype: (translation, sentences)
+    """
     def cacheKey(text):
         return "_".join([
             text.strip(), sourceLang, targetLang

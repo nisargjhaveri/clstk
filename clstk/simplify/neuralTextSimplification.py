@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+"""
+Neural Text Simplification.
+
+You need to set ``NTS_OPENNMT_PATH``, ``NTS_MODEL_PATH`` and ``NTS_GPUS``
+environmental variables to use this.
+"""
 
 import tempfile
 import os
@@ -70,6 +76,14 @@ def _simplify(sentences, lang):
 
 
 def simplify(sentences, lang):
+    """
+    Simplify sentences using NTS
+
+    :param sentences: List of sentence
+    :param lang: Language of sentences
+
+    :returns: List of simplified sentences
+    """
     def cacheKey(text):
         return "_".join([
             text.strip()

@@ -1,3 +1,11 @@
+"""
+Translate using Google Translate.
+
+To use this, environmental variable ``GOOGLE_APPLICATION_CREDENTIALS`` needs
+to be set with file continaining your key for Google Cloud account.
+
+See https://cloud.google.com/translate/docs/reference/libraries
+"""
 import shelve
 
 from google.cloud import translate as googleTranslate
@@ -37,6 +45,16 @@ def _translateText(text, source, target):
 
 
 def translate(text, sourceLang, targetLang):
+    """
+    Translate text
+
+    :param text: Text, each line contains one sentence
+    :param sourceLang: Two-letter code for source language
+    :param targetLang: Two-letter code for target language
+
+    :returns: translated text and list of translated sentences
+    :rtype: (translation, sentences)
+    """
     def cacheKey(text):
         return "_".join([
             text.strip(), sourceLang, targetLang
