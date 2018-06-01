@@ -13,3 +13,10 @@ Welcome to clstk's documentation!
    install
    datasets
    usage
+
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Developer Documentation
+
+  dev/core
