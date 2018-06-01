@@ -20,3 +20,4 @@ Welcome to clstk's documentation!
   :caption: Developer Documentation
 
   dev/core
+  dev/utils

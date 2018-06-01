@@ -2,7 +2,16 @@ import sys
 
 
 class ProgressBar(object):
+    """
+    Class to manage and show pretty progress-bar in the console
+    """
+
     def __init__(self, totalCount):
+        """
+        Initialize the progressbar
+
+        :param totalCount: Total items to be processed
+        """
         self._totalCount = totalCount
         self._pastProgress = 0
 
@@ -18,6 +27,11 @@ class ProgressBar(object):
         sys.stdout.flush()
 
     def done(self, doneCount):
+        """
+        Move progressbar ahead
+
+        :param doneCount: Out of ``totalCount``, this many have been processed
+        """
         progressTo = int(doneCount * 100 / self._totalCount)
 
         self._printProgress(progressTo - self._pastProgress)
@@ -25,5 +39,8 @@ class ProgressBar(object):
         self._pastProgress = progressTo
 
     def complete(self):
+        """
+        Complete progress
+        """
         self._printProgress(100 - self._pastProgress, newline=True)
         self._pastProgress = 100
