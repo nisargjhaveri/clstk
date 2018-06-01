@@ -10,7 +10,15 @@ logger = logging.getLogger("corpus.py")
 
 
 class Corpus(SentenceCollection):
+    """
+    Class for source documents. Contains utilities for loading document set.
+    """
     def __init__(self, dirname):
+        """
+        Initialize the class
+
+        :param dirname: Directory from where source documents are to be loaded
+        """
         super(Corpus, self).__init__()
 
         self._dirname = dirname
@@ -27,6 +35,18 @@ class Corpus(SentenceCollection):
 
     def load(self, params, translate=False, replaceWithTranslation=False,
              simplify=False, replaceWithSimplified=False):
+        """
+        Load source docuement set
+
+        :param params: ``dict`` containing different params including
+                       ``sourceLang`` and ``targetLang``.
+        :param translate: Whether to translate sentences to target language
+        :param replaceWithTranslation: Whether to replace source sentences
+                                       with translation
+        :param simplify: Whether to simplify sentences
+        :param replaceWithSimplified: Whether to replace source sentences with
+                                      simplified sentences
+        """
         self.setSourceLang(params['sourceLang'])
         self.setTargetLang(params['targetLang'])
 

@@ -9,31 +9,78 @@ from utils import nlp
 
 
 class SentenceCollection(object):
+    """
+    Class to store a colelction of sentences.
+
+    Also proivdes several common operations on the collection.
+    """
     def __init__(self):
+        """
+        Initialize the collection
+        """
         self._sentences = []
 
     def setSourceLang(self, lang):
+        """
+        Set source language for the colelction
+
+        :param lang: two-letter code for source language
+        """
         self.sourceLang = lang
 
     def setTargetLang(self, lang):
+        """
+        Set target language for the colelction
+
+        :param lang: two-letter code for target language
+        """
         self.targetLang = lang
 
     def addSentence(self, sentence):
+        """
+        Add a sentence to the colelction
+
+        :param sentence: sentence to be added
+        """
         if not isinstance(sentence, Sentence):
             raise RuntimeError("Expected an object of Sentence class")
 
         self._sentences.append(sentence)
 
     def addSentences(self, sentences):
+        """
+        Add sentences to the colelction
+
+        :param sentences: list of sentence to be added
+
+        .. seealso::
+            :meth:`clstk.sentenceCollection.SentenceCollection.addSentence`
+        """
         map(self.addSentence, sentences)
 
     def getSentences(self):
+        """
+        Get list of sentences in the collection
+
+        :returns: list of sentences
+        """
         return self._sentences[:]
 
     def getSentenceVectors(self):
+        """
+        Get list of sentence vectors for sentences in the collection
+
+        :returns: :class:`np.array` containing sentence vectors
+        """
         return np.array(map(Sentence.getVector, self._sentences))
 
     def getTranslationSentenceVectors(self):
+        """
+        Get list of sentence vectors for translations of sentences in the
+        collection
+
+        :returns: :class:`np.array` containing sentence vectors
+        """
         return np.array(map(Sentence.getTranslationVector, self._sentences))
 
     def _generateSentenceVectors(self, lang, getText, setVector):
@@ -58,16 +105,30 @@ class SentenceCollection(object):
         map(setVector, self._sentences, sentenceVectors)
 
     def generateSentenceVectors(self):
+        """
+        Generate sentence vectors
+        """
         self._generateSentenceVectors(self.sourceLang,
                                       Sentence.getText,
                                       Sentence.setVector)
 
     def generateTranslationSentenceVectors(self):
+        """
+        Generate sentence vectors for translations
+        """
         self._generateSentenceVectors(self.targetLang,
                                       Sentence.getTranslation,
                                       Sentence.setTranslationVector)
 
     def translate(self, sourceLang, targetLang, replaceOriginal=False):
+        """
+        Translate sentences
+
+        :param sourceLang: two-letter code for source language
+        :param targetLang: two-letter code for target language
+        :param replaceOriginal: Replace source text with translation if
+                                ``True``. Used for early-translation
+        """
         text = "\n".join(map(Sentence.getText, self._sentences))
         translation, _ = translate(text, sourceLang, targetLang)
 
@@ -79,6 +140,13 @@ class SentenceCollection(object):
         map(Sentence.setTranslation, self._sentences, translations)
 
     def simplify(self, sourceLang, replaceOriginal=False):
+        """
+        Simplify sentences
+
+        :param sourceLang: two-letter code for language
+        :param replaceOriginal: Replace source sentences with simplified
+                                sentences. Used for early-simplify.
+        """
         sentences = map(Sentence.getText, self._sentences)
 
         simpleSentences = simplify(sentences, sourceLang)
