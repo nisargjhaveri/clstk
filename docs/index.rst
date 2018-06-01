@@ -8,8 +8,8 @@ Welcome to clstk's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Getting Started
 
-   Installation <install.rst>
-   Datasets <datasets.rst>
-   Usage <usage.rst>
+   install
+   datasets
+   usage
