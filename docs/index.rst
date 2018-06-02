@@ -6,7 +6,7 @@
 Welcome to clstk's documentation!
 ======================================
 
-``clstk`` is an free and open source tool-kit for cross-lingual summarization (CLS).
+``clstk`` is a free and open source tool-kit for cross-lingual summarization (CLS).
 The tool-kit is intended for the use of both, developers and researchers working on cross-lingual summarization.
 End-users wanting to use cross-lingual summarization in real-world applications can also benefit from the tool-kit.
 
