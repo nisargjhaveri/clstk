@@ -24,3 +24,4 @@ Welcome to clstk's documentation!
   dev/evaluate
   dev/translate
   dev/simplify
+  dev/qualityEstimation
