@@ -12,12 +12,11 @@ Python dependencies
 -------------------
 The dependencies are listed in ``requirements.txt``.
 
-To install all the dependencies, run ``pip`` as followed.
+To install all the dependencies, run ``pip`` as followed. You may have to install some dependencies while running this. Fix any errors and retry.
 
 .. code-block:: console
 
  $ pip install --upgrade -r requirements.txt
-
 
 Also install nltk packages called ``stopwords`` and ``punkt``.
 
